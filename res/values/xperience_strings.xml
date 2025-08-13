@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0
+     Copyright 2025 XPerience Project
+-->
+<resources>
+    <string name="app_name">Optimizer</string>
+    <string name="optimization_title">Device Optimization</string>
+    <string name="optimizing_title">Device Optimization</string>
+    <string name="optimizing_app">Optimizing: %s</string>
+    <string name="optimization_complete">Optimization Complete</string>
+    <string name="device_ready">Your device is ready to go!</string>
+
+    <string name="channel_name">Optimization Notifications</string>
+    <string name="channel_description">Notifications for the optimization process.</string>
+</resources>

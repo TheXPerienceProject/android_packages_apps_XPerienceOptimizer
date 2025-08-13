@@ -1,0 +1,34 @@
+android_library {
+    name: "XPerienceOptimizer-worker",
+    srcs: ["src/mx/xperience/optimizer/workers/OptimizerWorker.kt"],
+    static_libs: [
+        "androidx.work_work-runtime-ktx",
+    ],
+    sdk_version: "current",
+}
+
+android_app {
+    name: "XPerienceOptimizer",
+    srcs: [
+        "src/**/*.java",
+        "src/**/*.kt",
+    ],
+    resource_dirs: ["res"],
+    certificate: "platform",
+    privileged: true,
+    optimize: {
+        enabled: true,
+        proguard_flags_files: ["proguard.flags"],
+    },
+    platform_apis: true,
+    
+    product_specific: false,
+    system_ext_specific: true,
+    manifest: "AndroidManifest.xml",
+    static_libs: [
+        "XPerienceOptimizer-worker",
+        "androidx.appcompat_appcompat",
+        "androidx.core_core-ktx",
+        "androidx.work_work-runtime-ktx",
+    ],
+}
