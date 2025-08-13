@@ -1,117 +1,118 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 XPerience Project
+
 package mx.xperience.optimizer.ui
 
-import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.Data
+import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import mx.xperience.optimizer.R
 import mx.xperience.optimizer.workers.OptimizerWorker
 
 class OptimizerActivity : AppCompatActivity() {
 
+    private lateinit var progressBar: ProgressBar
     private lateinit var tvProgress: TextView
     private lateinit var tvCurrentApp: TextView
-
-    private val requestPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-            if (isGranted) {
-                startOptimization()
-            } else {
-                Toast.makeText(this, "Permiso de notificaciones denegado", Toast.LENGTH_SHORT).show()
-                finish()
-            }
-        }
+    private lateinit var btnStart: Button
+    private lateinit var btnCancel: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_optimizer)
 
+        // Inicializar vistas
+        progressBar = findViewById(R.id.progress_bar)
         tvProgress = findViewById(R.id.tv_progress)
         tvCurrentApp = findViewById(R.id.tv_current_app)
+        btnStart = findViewById(R.id.btn_start)
+        btnCancel = findViewById(R.id.btn_cancel)
 
-        checkNotificationPermissionAndOptimize()
-    }
-
-    private fun checkNotificationPermissionAndOptimize() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // Android 13+
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
-                PackageManager.PERMISSION_GRANTED
-            ) {
-                startOptimization()
-            } else {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        } else {
+        btnStart.setOnClickListener {
             startOptimization()
         }
+
+        btnCancel.setOnClickListener {
+            cancelOptimization()
+            finish()
+        }
+
+        createNotificationChannel()
     }
 
     private fun startOptimization() {
-        createNotificationChannel()
+        btnStart.isEnabled = false
+        btnCancel.isEnabled = true
+        progressBar.progress = 0
+        tvProgress.text = "0%"
+        tvCurrentApp.text = getString(R.string.preparing_optimization)
 
-        val optimizationWorkRequest = OneTimeWorkRequestBuilder<OptimizerWorker>().build()
-        val workManager = WorkManager.getInstance(this)
-        workManager.enqueue(optimizationWorkRequest)
+        val workRequest = OneTimeWorkRequest.Builder(OptimizerWorker::class.java).build()
+        WorkManager.getInstance(this).enqueue(workRequest)
 
-        // Observa el estado del trabajo y actualiza la UI
-        workManager.getWorkInfoByIdLiveData(optimizationWorkRequest.id)
+        WorkManager.getInstance(this)
+            .getWorkInfoByIdLiveData(workRequest.id)
             .observe(this) { workInfo ->
-                if (workInfo != null) {
-                    when (workInfo.state) {
-                        WorkInfo.State.RUNNING -> {
-                            val progress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
-                            tvProgress.text = "$progress%"
-                            // Lógica para actualizar tvCurrentApp si necesitas, aunque requiere más lógica en el worker
-                        }
-                        WorkInfo.State.SUCCEEDED -> {
-                            showCompletionNotification()
-                            finish()
-                        }
-                        WorkInfo.State.FAILED -> {
-                            Toast.makeText(this, "Optimización fallida", Toast.LENGTH_SHORT).show()
-                            finish()
-                        }
-                        else -> {
-                            // Ignorar otros estados
-                        }
+                when (workInfo?.state) {
+                    WorkInfo.State.RUNNING -> {
+                        val progress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
+                        val appName = workInfo.progress.getString(OptimizerWorker.CURRENT_APP_NAME_KEY)
+                        
+                        progressBar.progress = progress
+                        tvProgress.text = "$progress%"
+                        tvCurrentApp.text = getString(R.string.optimizing_app, appName ?: "")
                     }
+                    WorkInfo.State.SUCCEEDED -> {
+                        showCompletionNotification()
+                        finish()
+                    }
+                    WorkInfo.State.FAILED -> {
+                        tvCurrentApp.text = getString(R.string.optimization_failed)
+                        btnStart.isEnabled = true
+                    }
+                    else -> {}
                 }
             }
     }
 
+    private fun cancelOptimization() {
+        WorkManager.getInstance(this).cancelAllWork()
+    }
+
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) { // Android 8.0+
-            val name = getString(R.string.channel_name)
-            val descriptionText = getString(R.string.channel_description)
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel("optimizer_channel", name, importance).apply {
-                description = descriptionText
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "optimizer_channel",
+                getString(R.string.channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = getString(R.string.channel_description)
             }
-            val notificationManager: NotificationManager = getSystemService(NotificationManager::class.java)
-            notificationManager.createNotificationChannel(channel)
+
+            getSystemService(NotificationManager::class.java)
+                .createNotificationChannel(channel)
         }
     }
 
     private fun showCompletionNotification() {
-        val builder = NotificationCompat.Builder(this, "optimizer_channel")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+        NotificationCompat.Builder(this, "optimizer_channel")
+            .setSmallIcon(R.drawable.ic_sync)
             .setContentTitle(getString(R.string.optimization_complete))
             .setContentText(getString(R.string.device_ready))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.notify(1, builder.build())
+            .build()
+            .let { notification ->
+                getSystemService(NotificationManager::class.java)
+                    .notify(1, notification)
+            }
     }
 }

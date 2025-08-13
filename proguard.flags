@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2011-2025 The XPerience Project
+# SPDX-License-Identifier: Apache-2.0
+
+-keep class mx.xperience.optimizer.ui.OptimizerActivity { *; }
+-keep class mx.xperience.optimizer.ui.* { *; }
+-keep class mx.xperience.optimizer.receivers.* { *; }
+-keep class mx.xperience.optimizer.services.* { *; }
+-keep class mx.xperience.optimizer.workers.* { *; }

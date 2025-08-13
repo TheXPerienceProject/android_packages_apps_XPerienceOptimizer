@@ -30,5 +30,6 @@ android_app {
         "androidx.appcompat_appcompat",
         "androidx.core_core-ktx",
         "androidx.work_work-runtime-ktx",
+        "androidx.lifecycle_lifecycle-livedata-ktx",
     ],
 }

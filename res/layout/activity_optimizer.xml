@@ -11,24 +11,20 @@
     android:gravity="center"
     android:background="?android:attr/colorBackground">
 
-    <!-- Icono del sistema (Material) -->
     <ImageView
         android:layout_width="64dp"
         android:layout_height="64dp"
-        android:layout_gravity="center"
         android:src="@drawable/ic_sync"
         android:tint="?android:attr/colorAccent" />
 
-    <!-- Título -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="@string/optimizing_title"
+        android:text="@string/optimization_title"
         android:textSize="20sp"
         android:textColor="?android:attr/textColorPrimary" />
 
-    <!-- Barra de progreso -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -40,24 +36,38 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="0%"
-            android:textSize="16sp"
-            android:textColor="?android:attr/textColorSecondary" />
+            android:textSize="16sp" />
 
         <ProgressBar
             android:id="@+id/progress_bar"
-            style="@*android:style/Widget.ProgressBar.Horizontal"
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:max="100"
             android:progressTint="?android:attr/colorAccent" />
     </LinearLayout>
 
-    <!-- App actual -->
     <TextView
         android:id="@+id/tv_current_app"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:textColor="?android:attr/textColorTertiary"
-        android:text="Preparando..." />
+        android:text="@string/preparing_optimization"
+        android:textColor="?android:attr/textColorTertiary" />
+
+    <Button
+        android:id="@+id/btn_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="@string/start_optimization" />
+
+    <Button
+        android:id="@+id/btn_cancel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/cancel"
+        android:enabled="false" />
 </LinearLayout>
