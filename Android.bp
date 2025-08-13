@@ -31,5 +31,6 @@ android_app {
         "androidx.core_core-ktx",
         "androidx.work_work-runtime-ktx",
         "androidx.lifecycle_lifecycle-livedata-ktx",
+        "com.google.android.material_material",
     ],
 }

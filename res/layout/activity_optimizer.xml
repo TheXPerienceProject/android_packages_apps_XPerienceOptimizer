@@ -7,67 +7,116 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="32dp"
-    android:gravity="center"
-    android:background="?android:attr/colorBackground">
+    android:padding="24dp"
+    android:background="@android:color/white">
 
-    <ImageView
-        android:layout_width="64dp"
-        android:layout_height="64dp"
-        android:src="@drawable/ic_sync"
-        android:tint="?android:attr/colorAccent" />
+    <!-- Circular Progress Bar -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:gravity="center">
 
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/circular_progress"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:progress="85"
+            app:indicatorColor="@color/colorPrimary"
+            app:trackColor="@color/gray_light"
+            app:trackThickness="8dp"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/tv_percentage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="85%"
+                android:textSize="28sp"
+                android:textColor="@android:color/black"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Optimization"
+                android:textSize="16sp"
+                android:textColor="@color/gray_dark"/>
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Optimization Items List -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/optimization_title"
-        android:textSize="20sp"
-        android:textColor="?android:attr/textColorPrimary" />
+        android:text="Optimization Items"
+        android:textSize="18sp"
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="8dp"/>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
         android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/tv_progress"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0%"
-            android:textSize="16sp" />
-
-        <ProgressBar
-            android:id="@+id/progress_bar"
-            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+        <!-- Repeat this block for each item -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:max="100"
-            android:progressTint="?android:attr/colorAccent" />
+            android:orientation="horizontal"
+            android:paddingVertical="12dp">
+
+            <CheckBox
+                android:id="@+id/cb_store"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:buttonTint="@color/colorPrimary"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Store"
+                android:textSize="16sp"
+                android:layout_marginStart="16dp"/>
+        </LinearLayout>
+
+        <!-- Private Code -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingVertical="12dp">
+
+            <CheckBox
+                android:id="@+id/cb_private_code"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:buttonTint="@color/colorPrimary"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Private code"
+                android:textSize="16sp"
+                android:layout_marginStart="16dp"/>
+        </LinearLayout>
+
+        <!-- Add more items as needed -->
+
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tv_current_app"
-        android:layout_width="wrap_content"
+    <!-- Action Buttons -->
+    <Button
+        android:id="@+id/btn_optimize"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text="START OPTIMIZATION"
         android:layout_marginTop="24dp"
-        android:text="@string/preparing_optimization"
-        android:textColor="?android:attr/textColorTertiary" />
-
-    <Button
-        android:id="@+id/btn_start"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="@string/start_optimization" />
-
-    <Button
-        android:id="@+id/btn_cancel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/cancel"
-        android:enabled="false" />
+        android:backgroundTint="@color/colorPrimary"
+        android:textColor="@android:color/white"/>
 </LinearLayout>

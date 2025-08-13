@@ -89,7 +89,7 @@ class OptimizerWorker(
         Log.d(TAG, "Intentando optimizar: $packageName")
         
         try {
-            // Método 1: API oculta
+            // Method 1: Hidden API
             try {
                 val method = pm.javaClass.getDeclaredMethod(
                     "compilePackage", 
@@ -105,7 +105,7 @@ class OptimizerWorker(
                 Log.w(TAG, "compilePackage no disponible para $packageName")
             }
 
-            // Método 2: Alternativo
+            // Method 2: Alternative
             try {
                 Log.d(TAG, "Intentando método alternativo para $packageName")
                 pm.setApplicationEnabledSetting(
@@ -119,10 +119,10 @@ class OptimizerWorker(
                 Log.w(TAG, "Sin permisos para optimizar $packageName", e)
             }
 
-            // Método 3: Simulación
-            Log.d(TAG, "Simulando optimización para $packageName")
-            delay(300)
-            Log.i(TAG, "$packageName - simulación completada")
+            // Method 3: Simulation for testing
+            //Log.d(TAG, "Simulando optimización para $packageName")
+            //delay(300)
+            //Log.i(TAG, "$packageName - simulación completada")
             
         } catch (e: Exception) {
             Log.e(TAG, "Error optimizando $packageName", e)

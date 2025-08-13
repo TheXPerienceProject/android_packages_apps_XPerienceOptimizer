@@ -5,114 +5,153 @@ package mx.xperience.optimizer.ui
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.widget.Button
-import android.widget.ProgressBar
+import android.widget.CheckBox
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import mx.xperience.optimizer.R
 import mx.xperience.optimizer.workers.OptimizerWorker
 
+import java.util.UUID
+
 class OptimizerActivity : AppCompatActivity() {
 
-    private lateinit var progressBar: ProgressBar
-    private lateinit var tvProgress: TextView
-    private lateinit var tvCurrentApp: TextView
-    private lateinit var btnStart: Button
-    private lateinit var btnCancel: Button
+    // UI Components
+    private lateinit var circularProgress: CircularProgressIndicator
+    private lateinit var tvPercentage: TextView
+    private lateinit var btnOptimize: Button
+    private lateinit var cbStore: CheckBox
+    private lateinit var cbPrivateCode: CheckBox
+
+    // WorkManager
+    private var workRequestId: UUID? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_optimizer)
 
         // Inicializar vistas
-        progressBar = findViewById(R.id.progress_bar)
-        tvProgress = findViewById(R.id.tv_progress)
-        tvCurrentApp = findViewById(R.id.tv_current_app)
-        btnStart = findViewById(R.id.btn_start)
-        btnCancel = findViewById(R.id.btn_cancel)
+        circularProgress = findViewById(R.id.circular_progress)
+        tvPercentage = findViewById(R.id.tv_percentage)
+        btnOptimize = findViewById(R.id.btn_optimize)
+        cbStore = findViewById(R.id.cb_store)
+        cbPrivateCode = findViewById(R.id.cb_private_code)
 
-        btnStart.setOnClickListener {
-            startOptimization()
+        // Configure listeners
+        btnOptimize.setOnClickListener {
+            startOptimizationWithWorkManager()
         }
 
-        btnCancel.setOnClickListener {
-            cancelOptimization()
-            finish()
-        }
-
+        // Initialize progress
+        updateProgressUI(0)
         createNotificationChannel()
     }
 
-    private fun startOptimization() {
-        btnStart.isEnabled = false
-        btnCancel.isEnabled = true
-        progressBar.progress = 0
-        tvProgress.text = "0%"
-        tvCurrentApp.text = getString(R.string.preparing_optimization)
-
+    private fun startOptimizationWithWorkManager() {
+        btnOptimize.isEnabled = false
+        
         val workRequest = OneTimeWorkRequest.Builder(OptimizerWorker::class.java).build()
+        workRequestId = workRequest.id
         WorkManager.getInstance(this).enqueue(workRequest)
 
+        // Observe progress
         WorkManager.getInstance(this)
             .getWorkInfoByIdLiveData(workRequest.id)
             .observe(this) { workInfo ->
                 when (workInfo?.state) {
                     WorkInfo.State.RUNNING -> {
                         val progress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
-                        val appName = workInfo.progress.getString(OptimizerWorker.CURRENT_APP_NAME_KEY)
+                        val currentApp = workInfo.progress.getString(OptimizerWorker.CURRENT_APP_NAME_KEY)
                         
-                        progressBar.progress = progress
-                        tvProgress.text = "$progress%"
-                        tvCurrentApp.text = getString(R.string.optimizing_app, appName ?: "")
+                        updateProgressUI(progress)
+                        updateCheckboxes(progress)
+                        
+                        currentApp?.let {
+                            showInProgressNotification(progress, it)
+                        }
                     }
                     WorkInfo.State.SUCCEEDED -> {
+                        updateProgressUI(100)
+                        cbStore.isChecked = true
+                        cbPrivateCode.isChecked = true
                         showCompletionNotification()
                         finish()
                     }
                     WorkInfo.State.FAILED -> {
-                        tvCurrentApp.text = getString(R.string.optimization_failed)
-                        btnStart.isEnabled = true
+                        btnOptimize.isEnabled = true
+                        showErrorNotification()
                     }
                     else -> {}
                 }
             }
     }
 
-    private fun cancelOptimization() {
-        WorkManager.getInstance(this).cancelAllWork()
+    private fun updateProgressUI(progress: Int) {
+        circularProgress.progress = progress
+        tvPercentage.text = "$progress%"
+    }
+
+    private fun updateCheckboxes(progress: Int) {
+        cbStore.isChecked = progress >= 30
+        cbPrivateCode.isChecked = progress >= 70
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                "optimizer_channel",
-                getString(R.string.channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = getString(R.string.channel_description)
+            val name = getString(R.string.channel_name)
+            val descriptionText = getString(R.string.channel_description)
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel("optimizer_channel", name, importance).apply {
+                description = descriptionText
             }
-
-            getSystemService(NotificationManager::class.java)
-                .createNotificationChannel(channel)
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
         }
     }
 
+    private fun showInProgressNotification(progress: Int, currentApp: String) {
+        val builder = NotificationCompat.Builder(this, "optimizer_channel")
+            .setSmallIcon(R.drawable.ic_sync)
+            .setContentTitle("Optimizing: $progress%")
+            .setContentText(currentApp)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setProgress(100, progress, false)
+            .setOngoing(true)
+
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.notify(1, builder.build())
+    }
+
     private fun showCompletionNotification() {
-        NotificationCompat.Builder(this, "optimizer_channel")
+        val builder = NotificationCompat.Builder(this, "optimizer_channel")
             .setSmallIcon(R.drawable.ic_sync)
             .setContentTitle(getString(R.string.optimization_complete))
             .setContentText(getString(R.string.device_ready))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .build()
-            .let { notification ->
-                getSystemService(NotificationManager::class.java)
-                    .notify(1, notification)
-            }
+
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.notify(2, builder.build())
+    }
+
+    private fun showErrorNotification() {
+        val builder = NotificationCompat.Builder(this, "optimizer_channel")
+            .setSmallIcon(R.drawable.ic_sync)
+            .setContentTitle("Optimization Failed")
+            .setContentText("Tap to retry")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.notify(3, builder.build())
     }
 }
