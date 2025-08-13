@@ -6,65 +6,82 @@ package mx.xperience.optimizer.ui
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.widget.Button
-import android.widget.CheckBox
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.work.Data
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import mx.xperience.optimizer.R
+import mx.xperience.optimizer.ui.adapters.AppStatusAdapterDynamic
+import mx.xperience.optimizer.ui.adapters.AppStatusDynamic
+import mx.xperience.optimizer.ui.adapters.Status
 import mx.xperience.optimizer.workers.OptimizerWorker
-
-import java.util.UUID
 
 class OptimizerActivity : AppCompatActivity() {
 
-    // UI Components
     private lateinit var circularProgress: CircularProgressIndicator
     private lateinit var tvPercentage: TextView
-    private lateinit var btnOptimize: Button
-    private lateinit var cbStore: CheckBox
-    private lateinit var cbPrivateCode: CheckBox
+    private lateinit var tvCurrentApp: TextView
+    private lateinit var rvAppList: RecyclerView
 
-    // WorkManager
-    private var workRequestId: UUID? = null
+    private lateinit var appList: MutableList<AppStatusDynamic>
+    private lateinit var adapter: AppStatusAdapterDynamic
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_optimizer)
 
-        // Inicializar vistas
         circularProgress = findViewById(R.id.circular_progress)
         tvPercentage = findViewById(R.id.tv_percentage)
-        btnOptimize = findViewById(R.id.btn_optimize)
-        cbStore = findViewById(R.id.cb_store)
-        cbPrivateCode = findViewById(R.id.cb_private_code)
+        tvCurrentApp = findViewById(R.id.tv_current_app)
+        rvAppList = findViewById(R.id.rv_app_list)
 
-        // Configure listeners
-        btnOptimize.setOnClickListener {
-            startOptimizationWithWorkManager()
-        }
+        appList = loadInstalledApps()
+        adapter = AppStatusAdapterDynamic(appList)
+        rvAppList.layoutManager = LinearLayoutManager(this)
+        rvAppList.adapter = adapter
 
-        // Initialize progress
-        updateProgressUI(0)
         createNotificationChannel()
+        startOptimization()
     }
 
-    private fun startOptimizationWithWorkManager() {
-        btnOptimize.isEnabled = false
-        
-        val workRequest = OneTimeWorkRequest.Builder(OptimizerWorker::class.java).build()
-        workRequestId = workRequest.id
+    private fun loadInstalledApps(): MutableList<AppStatusDynamic> {
+        val pm = packageManager
+        val apps = mutableListOf<AppStatusDynamic>()
+
+        val packages = pm.getInstalledApplications(0)
+        for (appInfo in packages) {
+            if ((appInfo.flags and ApplicationInfo.FLAG_SYSTEM) == 0) {
+                val name = pm.getApplicationLabel(appInfo).toString()
+                val icon: Drawable = pm.getApplicationIcon(appInfo)
+                apps.add(AppStatusDynamic(name, icon, Status.PENDING, appInfo.packageName))
+            }
+        }
+        return apps
+    }
+
+    private fun startOptimization() {
+        // Pasar lista de packageNames al Worker
+        val packageNames = appList.map { it.packageName }.toTypedArray().toList().toTypedArray() as Array<String?>
+        val inputData = Data.Builder()
+            .putStringArray(OptimizerWorker.PACKAGE_LIST_KEY, packageNames)
+            .build()
+
+        val workRequest = OneTimeWorkRequest.Builder(OptimizerWorker::class.java)
+            .setInputData(inputData)
+            .build()
+
         WorkManager.getInstance(this).enqueue(workRequest)
 
-        // Observe progress
         WorkManager.getInstance(this)
             .getWorkInfoByIdLiveData(workRequest.id)
             .observe(this) { workInfo ->
@@ -72,23 +89,21 @@ class OptimizerActivity : AppCompatActivity() {
                     WorkInfo.State.RUNNING -> {
                         val progress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
                         val currentApp = workInfo.progress.getString(OptimizerWorker.CURRENT_APP_NAME_KEY)
-                        
-                        updateProgressUI(progress)
-                        updateCheckboxes(progress)
-                        
-                        currentApp?.let {
-                            showInProgressNotification(progress, it)
-                        }
+
+                        tvPercentage.text = "$progress%"
+                        circularProgress.progress = progress
+                        tvCurrentApp.text = "Optimizing ${currentApp ?: ""}"
+
+                        updateAppStatus(currentApp, progress)
+                        showInProgressNotification(progress, currentApp ?: "")
                     }
                     WorkInfo.State.SUCCEEDED -> {
-                        updateProgressUI(100)
-                        cbStore.isChecked = true
-                        cbPrivateCode.isChecked = true
+                        tvPercentage.text = "100%"
+                        circularProgress.progress = 100
+                        markAllDone()
                         showCompletionNotification()
-                        finish()
                     }
                     WorkInfo.State.FAILED -> {
-                        btnOptimize.isEnabled = true
                         showErrorNotification()
                     }
                     else -> {}
@@ -96,14 +111,19 @@ class OptimizerActivity : AppCompatActivity() {
             }
     }
 
-    private fun updateProgressUI(progress: Int) {
-        circularProgress.progress = progress
-        tvPercentage.text = "$progress%"
+    private fun updateAppStatus(currentApp: String?, progress: Int) {
+        appList.forEachIndexed { index, app ->
+            when {
+                app.name == currentApp -> app.status = Status.RUNNING
+                progress >= ((index + 1).toFloat() / appList.size * 100) -> app.status = Status.DONE
+            }
+        }
+        adapter.notifyDataSetChanged()
     }
 
-    private fun updateCheckboxes(progress: Int) {
-        cbStore.isChecked = progress >= 30
-        cbPrivateCode.isChecked = progress >= 70
+    private fun markAllDone() {
+        appList.forEach { it.status = Status.DONE }
+        adapter.notifyDataSetChanged()
     }
 
     private fun createNotificationChannel() {
@@ -114,8 +134,7 @@ class OptimizerActivity : AppCompatActivity() {
             val channel = NotificationChannel("optimizer_channel", name, importance).apply {
                 description = descriptionText
             }
-            val notificationManager: NotificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
         }
     }
@@ -125,7 +144,6 @@ class OptimizerActivity : AppCompatActivity() {
             .setSmallIcon(R.drawable.ic_sync)
             .setContentTitle("Optimizing: $progress%")
             .setContentText(currentApp)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
             .setProgress(100, progress, false)
             .setOngoing(true)
 
@@ -135,10 +153,9 @@ class OptimizerActivity : AppCompatActivity() {
 
     private fun showCompletionNotification() {
         val builder = NotificationCompat.Builder(this, "optimizer_channel")
-            .setSmallIcon(R.drawable.ic_sync)
+            .setSmallIcon(R.drawable.ic_check)
             .setContentTitle(getString(R.string.optimization_complete))
             .setContentText(getString(R.string.device_ready))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
         val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager.notify(2, builder.build())
@@ -149,7 +166,6 @@ class OptimizerActivity : AppCompatActivity() {
             .setSmallIcon(R.drawable.ic_sync)
             .setContentTitle("Optimization Failed")
             .setContentText("Tap to retry")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
 
         val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager.notify(3, builder.build())

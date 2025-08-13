@@ -3,6 +3,7 @@
 
 -keep class mx.xperience.optimizer.ui.OptimizerActivity { *; }
 -keep class mx.xperience.optimizer.ui.* { *; }
+-keep class mx.xperience.optimizer.ui.adapters.* { *; }
 -keep class mx.xperience.optimizer.receivers.* { *; }
 -keep class mx.xperience.optimizer.services.* { *; }
 -keep class mx.xperience.optimizer.workers.* { *; }

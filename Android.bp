@@ -32,5 +32,6 @@ android_app {
         "androidx.work_work-runtime-ktx",
         "androidx.lifecycle_lifecycle-livedata-ktx",
         "com.google.android.material_material",
+        "androidx.recyclerview_recyclerview",  
     ],
 }

@@ -23,22 +23,22 @@ class OptimizerWorker(
         const val PROGRESS_KEY = "progress"
         const val CURRENT_APP_NAME_KEY = "current_app_name"
         const val CURRENT_PACKAGE_KEY = "current_package"
+        const val PACKAGE_LIST_KEY = "package_list"
         private const val TAG = "OptimizerWorker"
     }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         Log.d(TAG, "Iniciando proceso de optimización")
-        
+
         try {
             val pm = applicationContext.packageManager
-            val installedPackages = pm.getInstalledPackages(PackageManager.GET_META_DATA).also {
-                Log.d(TAG, "Encontradas ${it.size} aplicaciones instaladas")
-            }.filterNot { 
-                it.packageName == applicationContext.packageName 
-            }.also {
-                Log.d(TAG, "Optimizando ${it.size} aplicaciones (excluyendo esta app)")
-            }
-            
+            val installedPackages = pm.getInstalledPackages(PackageManager.GET_META_DATA)
+                .filterNot { it.packageName == applicationContext.packageName }
+                .sortedBy { it.packageName.lowercase() }
+                .also {
+                    Log.d(TAG, "Optimizando ${it.size} aplicaciones (excluyendo esta app)")
+                }
+
             if (installedPackages.isEmpty()) {
                 Log.w(TAG, "No se encontraron aplicaciones para optimizar")
                 return@withContext Result.failure()
@@ -47,38 +47,39 @@ class OptimizerWorker(
             for ((index, packageInfo) in installedPackages.withIndex()) {
                 val packageName = packageInfo.packageName
                 Log.d(TAG, "Procesando aplicación #${index + 1}: $packageName")
-                
-                try {
-                    val appName = try {
-                        val appInfo = pm.getApplicationInfo(packageName, 0)
-                        pm.getApplicationLabel(appInfo).toString().also {
-                            Log.v(TAG, "Nombre de aplicación obtenido: $it")
-                        }
-                    } catch (e: NameNotFoundException) {
-                        Log.w(TAG, "No se pudo obtener nombre para $packageName, usando nombre de paquete")
-                        packageName
-                    }
 
-                    val progress = ((index + 1) * 100 / installedPackages.size)
-                    Log.d(TAG, "Progreso: $progress% - Optimizando: $appName")
-                    
-                    setProgress(workDataOf(
+                val appName = try {
+                    val appInfo = pm.getApplicationInfo(packageName, 0)
+                    pm.getApplicationLabel(appInfo).toString().also {
+                        Log.v(TAG, "Nombre de aplicación obtenido: $it")
+                    }
+                } catch (e: NameNotFoundException) {
+                    Log.w(TAG, "No se pudo obtener nombre para $packageName, usando nombre de paquete")
+                    packageName
+                }
+
+                val progress = ((index + 1) * 100 / installedPackages.size)
+                Log.d(TAG, "Progreso: $progress% - Optimizando: $appName")
+
+                // Reportar estado a la UI
+                setProgress(
+                    workDataOf(
                         PROGRESS_KEY to progress,
                         CURRENT_APP_NAME_KEY to appName,
                         CURRENT_PACKAGE_KEY to packageName
-                    ))
+                    )
+                )
 
-                    optimizePackage(pm, packageName)
-                    
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error procesando $packageName", e)
-                    // Continuar con la siguiente aplicación
-                }
+                // Ejecutar optimización
+                optimizePackage(pm, packageName)
+
+                // Pequeña pausa para que la UI pueda mostrar el cambio
+                delay(300)
             }
-            
+
             Log.i(TAG, "Optimización completada exitosamente")
             Result.success()
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Error fatal en el proceso de optimización", e)
             Result.failure()
@@ -87,13 +88,13 @@ class OptimizerWorker(
 
     private suspend fun optimizePackage(pm: PackageManager, packageName: String) {
         Log.d(TAG, "Intentando optimizar: $packageName")
-        
+
         try {
             // Method 1: Hidden API
             try {
                 val method = pm.javaClass.getDeclaredMethod(
-                    "compilePackage", 
-                    String::class.java, 
+                    "compilePackage",
+                    String::class.java,
                     Int::class.javaPrimitiveType
                 )
                 method.isAccessible = true
@@ -120,13 +121,12 @@ class OptimizerWorker(
             }
 
             // Method 3: Simulation for testing
-            //Log.d(TAG, "Simulando optimización para $packageName")
-            //delay(300)
-            //Log.i(TAG, "$packageName - simulación completada")
-            
+            Log.d(TAG, "Simulando optimización para $packageName")
+            delay(200)
+            Log.i(TAG, "$packageName - simulación completada")
+
         } catch (e: Exception) {
             Log.e(TAG, "Error optimizando $packageName", e)
-            throw e
         }
     }
 }

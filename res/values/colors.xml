@@ -8,4 +8,15 @@
     <color name="colorAccent">#03DAC5</color>
     <color name="gray_light">#E0E0E0</color>
     <color name="gray_dark">#757575</color>
+    <color name="progress_active">#FF9800</color> <!-- Naranja estilo OnePlus -->
+    <color name="status_done">#4CAF50</color>     <!-- Verde éxito -->
+    <color name="status_pending">#BDBDBD</color>  <!-- Gris pendiente -->
+    <color name="background">#FFFFFF</color>      <!-- Fondo blanco -->
+    <!-- Estilo OnePlus rojo vibrante -->
+    <color name="progress_indicator">#FF2B2B</color> <!-- Rojo principal -->
+    <color name="progress_track">#FFB3B3</color> <!-- Rojo claro para el fondo del indicador -->
+
+    <!-- Colores de texto -->
+    <color name="percentage_text">#FF2B2B</color>
+    <color name="app_name_text">#000000</color>
 </resources>
