@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2024 XPerience Project
+
 package mx.xperience.optimizer.ui.adapters
 
 import android.graphics.drawable.Drawable

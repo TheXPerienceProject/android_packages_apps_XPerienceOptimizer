@@ -1,0 +1,15 @@
+<!-- SPDX-License-Identifier: Apache-2.0
+     Copyright 2025 XPerience Project
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="ring"
+    android:innerRadiusRatio="3"
+    android:thicknessRatio="16"
+    android:useLevel="true">
+    <gradient
+        android:type="sweep"
+        android:useLevel="true"
+        android:startColor="#00796B"
+        android:endColor="#03DAC5"
+        android:angle="0"/>
+</shape>
