@@ -21,8 +21,6 @@
             android:theme="@style/Theme.XPerienceOptimizer">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <!-- remove -->
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
