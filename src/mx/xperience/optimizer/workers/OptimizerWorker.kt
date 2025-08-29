@@ -28,7 +28,7 @@ class OptimizerWorker(
     }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Iniciando proceso de optimización")
+        Log.d(TAG, "Starting optimisation process")
 
         try {
             val pm = applicationContext.packageManager

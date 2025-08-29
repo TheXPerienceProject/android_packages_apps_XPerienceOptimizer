@@ -154,11 +154,11 @@ class OptimizerActivity : AppCompatActivity() {
                 .observe(this) { workInfo ->
                     if (workInfo != null) {
                         val progress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
-                        // actualizar ProgressBar si tienes
+                        // Update progress bar
                         if (progress == 100 && workInfo.state.isFinished) {
                             // mostrar FAB
                             fabExit.show()
-                            Toast.makeText(this, "Optimización completada!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, getString(R.string.optimization_completed), Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -169,7 +169,7 @@ class OptimizerActivity : AppCompatActivity() {
         val pm = packageManager
         val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
             .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
-            .sortedBy { it.loadLabel(pm).toString() } // O el criterio que quieras para optimizar primero
+            .sortedBy { it.loadLabel(pm).toString() }
 
         val apps = packages.map { appInfo ->
             AppStatusDynamic(
@@ -213,7 +213,7 @@ class OptimizerActivity : AppCompatActivity() {
                         progressBar.progress = progress
 
                         // upgrade text and icon
-                        tvCurrentApp.text = "Optimizing ${currentApp ?: ""}"
+                        tvCurrentApp.text = getString(R.string.optimizing_app, currentApp ?: "")
                         val appIcon: Drawable? = try {
                             if (currentPackage != null) packageManager.getApplicationIcon(
                                 currentPackage
@@ -231,17 +231,17 @@ class OptimizerActivity : AppCompatActivity() {
                     WorkInfo.State.SUCCEEDED -> {
                         tvPercentage.text = "100%"
                         progressBar.progress = 100
-                        tvCurrentApp.text = "Optimized!!!"
+                        tvCurrentApp.text = getString(R.string.optimized)
                         showCompletionNotification()
                         fabExit.show()
-                        Toast.makeText(this, "Optimización completada!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.optimization_completed), Toast.LENGTH_SHORT).show()
                     }
 
                     WorkInfo.State.FAILED -> {
                         showErrorNotification()
-                        tvCurrentApp.text = "Optimization failed"
+                        tvCurrentApp.text = getString(R.string.optimization_failed)
                         fabExit.show()
-                        Toast.makeText(this, "Optimización failed!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.optimization_failed), Toast.LENGTH_SHORT).show()
                     }
 
                     else -> {}
@@ -288,8 +288,8 @@ class OptimizerActivity : AppCompatActivity() {
     private fun showErrorNotification() {
         val builder = NotificationCompat.Builder(this, "optimizer_channel")
             .setSmallIcon(R.drawable.ic_sync)
-            .setContentTitle("Optimization Failed")
-            .setContentText("Tap to retry")
+            .setContentTitle(getString(R.string.optimization_failed))
+            .setContentText(getString(R.string.retry_optimization))
             .setOngoing(false)
 
         val notificationManager = getSystemService(NotificationManager::class.java)

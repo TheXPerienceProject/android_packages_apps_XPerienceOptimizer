@@ -6,6 +6,7 @@
     <string name="app_name">Optimizer</string>
     <string name="optimization_title">Device Optimization</string>
     <string name="optimize_title">Device Optimization</string>
+
     <!-- Canal de notificaciones -->
     <string name="channel_name">Optimizer Notifications</string>
     <string name="channel_description">Notifications for optimization progress and completion</string>
@@ -14,7 +15,7 @@
     <string name="optimizing_app">Optimizing: %1$s</string>
     <string name="optimization_complete">Optimization Complete</string>
     <string name="device_ready">Your device is ready</string>
-    <string name="optimization_failed">Optimization Failed</string>
+    <string name="optimization_failed">Optimization Failed!</string>
     <string name="retry_optimization">Tap to retry</string>
 
     <!-- UI general -->
@@ -22,4 +23,9 @@
     <string name="progress_percentage">%1$d%%</string>
     <string name="store_optimized">Store Optimized</string>
     <string name="private_code_optimized">Private Code Optimized</string>
+    <string name="optimization_completed">Optimization completed!</string>
+    <string name="optimized">Optimized!!!</string>
+    <string name="system_update_detected">System update detected on boot. Launching optimizer…</string>
+    <string name="no_update_detected">No system update detected on boot.</string>
+    <string name="log_optimization_start">Starting optimisation process</string>
 </resources>

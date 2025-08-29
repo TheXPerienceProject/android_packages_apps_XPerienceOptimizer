@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import mx.xperience.optimizer.ui.OptimizerActivity
+import mx.xperience.optimizer.R
 
 class PostUpdateReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -19,14 +20,14 @@ class PostUpdateReceiver : BroadcastReceiver() {
                 val currentFingerprint = Build.FINGERPRINT
 
                 if (lastFingerprint == null || lastFingerprint != currentFingerprint) {
-                    Log.i("PostUpdateReceiver", "System update detected on boot. Launching optimizer...")
+                    Log.i("PostUpdateReceiver", context.getString(R.string.system_update_detected))
                     prefs.edit().putString("last_fingerprint", currentFingerprint).apply()
 
                     val optimizerIntent = Intent(context, OptimizerActivity::class.java)
                     optimizerIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     context.startActivity(optimizerIntent)
                 } else {
-                    Log.d("PostUpdateReceiver", "No system update detected on boot.")
+                    Log.d("PostUpdateReceiver", context.getString(R.string.no_update_detected))
                 }
             }
 

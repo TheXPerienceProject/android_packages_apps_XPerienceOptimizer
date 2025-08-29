@@ -3,31 +3,42 @@
 
 package mx.xperience.optimizer
 
-import java.io.File
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 class CpuUsageReader {
-    private var lastIdle: Long = 0
+
     private var lastTotal: Long = 0
+    private var lastIdle: Long = 0
 
     fun readUsage(): Int {
-        val cpuLine = File("/proc/stat").readLines()
-            .firstOrNull { it.startsWith("cpu ") }
-            ?: return 0
+        return try {
+            // Ejecutamos un top rápido, solo una iteración (-n 1)
+            val process = Runtime.getRuntime().exec(arrayOf("top", "-n", "1", "-b"))
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            var line: String?
 
-        val parts = cpuLine.split("\\s+".toRegex()).drop(1).map { it.toLong() }
+            while (reader.readLine().also { line = it } != null) {
+                line?.let { l ->
+                    // Busca la línea que empieza con "CPU" o "%cpu"
+                    if (l.contains("CPU") || l.contains("Cpu")) {
+                        // Ejemplo de salida: "CPU usage: 12% user, 3% sys, 84% idle"
+                        val regex = "(\\d+)%".toRegex()
+                        val matches =
+                            regex.findAll(l).map { it.value.replace("%", "").toInt() }.toList()
 
-        val idle = parts[3] // idle time
-        val total = parts.sum()
-
-        val diffIdle = idle - lastIdle
-        val diffTotal = total - lastTotal
-
-        lastIdle = idle
-        lastTotal = total
-
-        return if (diffTotal > 0) {
-            ((diffTotal - diffIdle) * 100 / diffTotal).toInt()
-        } else {
+                        if (matches.isNotEmpty()) {
+                            val idle = matches.last() // normalmente el último es idle
+                            return 100 - idle // uso real
+                        }
+                    }
+                }
+            }
+            reader.close()
+            process.destroy()
+            0
+        } catch (e: Exception) {
+            e.printStackTrace()
             0
         }
     }
