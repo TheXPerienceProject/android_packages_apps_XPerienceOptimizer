@@ -8,14 +8,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="?android:attr/colorBackground"
+    android:background="?attr/colorSurface"
     android:padding="16dp">
 
     <!-- Progress circle -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_weight="2"
         android:gravity="center">
 
         <androidx.cardview.widget.CardView
@@ -24,8 +24,8 @@
             android:layout_gravity="center"
             app:cardCornerRadius="110dp"
             app:cardElevation="6dp"
-            android:backgroundTint="@android:color/white"
-            android:foreground="?android:attr/selectableItemBackgroundBorderless">
+            app:strokeColor="?attr/colorOutline"
+            app:strokeWidth="1dp">
 
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -45,7 +45,6 @@
                     android:rotation="-90"
                     android:progressDrawable="@drawable/circular_progress_drawable" />
 
-                <!-- Porcentaje en el centro -->
                 <TextView
                     android:id="@+id/tv_percentage"
                     android:layout_width="wrap_content"
@@ -53,52 +52,146 @@
                     android:text="0%"
                     android:textSize="28sp"
                     android:textStyle="bold"
-                    android:textColor="@android:color/black"
-                    android:layout_centerInParent="true"
-                    android:layout_gravity="center_horizontal"
-                    android:paddingBottom="8dp"/>
+                    android:textColor="@color/gray_light"
+                    android:layout_centerInParent="true"/>
             </RelativeLayout>
         </androidx.cardview.widget.CardView>
     </FrameLayout>
 
-    <!-- Texto informativo -->
+    <!-- App info -->
     <ImageView
         android:id="@+id/ivCurrentAppIcon"
-        android:layout_width="25dp"
-        android:layout_height="27dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginTop="10dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:layout_gravity="center_horizontal"
-        android:contentDescription="app_icon" />
+        android:layout_marginTop="8dp"
+        android:contentDescription="App icon"/>
     <TextView
         android:id="@+id/tv_current_app"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Optimizando aplicaciones..."
-        android:textSize="18sp"
-        android:layout_gravity="center"
-        android:paddingTop="8dp"
-        android:paddingBottom="16dp"
-        android:textColor="@android:color/darker_gray" />
+        android:textSize="16sp"
+        android:ellipsize="end"
+        android:textColor="@color/gray_light"
+        android:layout_gravity="center_horizontal"
+        android:paddingTop="4dp"
+        android:paddingBottom="12dp"/>
 
-    <!-- Lista de apps -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_app_list"
+    <!-- CPU Card -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cpuCard"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="2"
-        android:clipToPadding="false"
-        android:paddingBottom="16dp"/>
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="8dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        app:strokeColor="?attr/colorOutline"
+        app:strokeWidth="1dp">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/tvCPU"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CPU: 0%"
+                android:textSize="16sp"
+                android:textColor="@color/gray_light"/>
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/lpiCPU"
+                android:layout_width="match_parent"
+                android:layout_height="12dp"
+                android:layout_marginTop="8dp"
+                app:trackColor="@color/gray_light"
+                app:indicatorColor="@color/green"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- RAM Card -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/ramCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="8dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        app:strokeColor="?attr/colorOutline"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/tvRAM"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="RAM: 0/0 MB"
+                android:textSize="16sp"
+                android:textColor="@color/gray_light"/>
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/lpiRAM"
+                android:layout_width="match_parent"
+                android:layout_height="12dp"
+                android:layout_marginTop="8dp"
+                app:trackColor="@color/gray_light"
+                app:indicatorColor="@color/green"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Temp Card -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/tempCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="8dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        app:strokeColor="?attr/colorOutline"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/tvTemp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Temp: 0°C"
+                android:textSize="16sp"
+                android:textColor="@color/gray_light"/>
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/lpiTemp"
+                android:layout_width="match_parent"
+                android:layout_height="12dp"
+                android:layout_marginTop="8dp"
+                app:trackColor="@color/gray_light"
+                app:indicatorColor="@color/green"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Exit FAB -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabExit"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="end"
         android:layout_margin="16dp"
         android:visibility="gone"
         android:contentDescription="Salir"
         android:src="@android:drawable/ic_menu_close_clear_cancel"
-        app:backgroundTint="#D32F2F"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:backgroundTint="@color/error_red"/>
 </LinearLayout>

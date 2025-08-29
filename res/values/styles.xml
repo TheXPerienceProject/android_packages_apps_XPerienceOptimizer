@@ -2,4 +2,16 @@
 <!-- SPDX-License-Identifier: Apache-2.0
      Copyright 2025 XPerience Project
 -->
-<resources></resources>
+<resources>
+    <style name="Theme.XPerienceOptimizer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- tus customizaciones -->
+        <item name="colorPrimary">#9C27B0</item>
+        <item name="colorPrimaryVariant">#7B1FA2</item>
+        <item name="colorSecondary">#80CBC4</item>
+
+        <item name="colorOnSurface">#2C3E50</item>
+
+        <!-- Surface & background -->
+        <item name="android:colorBackground">#2C3E50</item>
+    </style>
+</resources>

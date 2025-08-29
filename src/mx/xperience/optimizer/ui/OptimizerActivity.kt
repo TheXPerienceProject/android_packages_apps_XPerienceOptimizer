@@ -3,45 +3,56 @@
 
 package mx.xperience.optimizer.ui
 
+import android.app.ActivityManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import mx.xperience.optimizer.CpuUsageReader
 import mx.xperience.optimizer.R
-import mx.xperience.optimizer.ui.adapters.AppStatusAdapterDynamic
 import mx.xperience.optimizer.ui.adapters.AppStatusDynamic
 import mx.xperience.optimizer.ui.adapters.Status
 import mx.xperience.optimizer.workers.OptimizerWorker
 
+import java.io.File
+
 class OptimizerActivity : AppCompatActivity() {
 
-    private lateinit var progressBar: ProgressBar
+    private lateinit var tvCPU: TextView
+    private lateinit var lpiCPU: LinearProgressIndicator
+    private lateinit var tvRAM: TextView
+    private lateinit var lpiRAM: LinearProgressIndicator
+    private lateinit var tvTemp: TextView
+    private lateinit var lpiTemp: LinearProgressIndicator
     private lateinit var tvPercentage: TextView
     private lateinit var tvCurrentApp: TextView
-    private lateinit var rvAppList: RecyclerView
+    private lateinit var progressBar: ProgressBar
 
     private lateinit var appList: MutableList<AppStatusDynamic>
-    private val visibleList: MutableList<AppStatusDynamic> = mutableListOf()
-    private lateinit var adapter: AppStatusAdapterDynamic
 
     private lateinit var fabExit: FloatingActionButton
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val updateInterval = 1000L // 1 sec
+    private val cpuReader = CpuUsageReader()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,15 +61,18 @@ class OptimizerActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.circular_progress)
         tvPercentage = findViewById(R.id.tv_percentage)
         tvCurrentApp = findViewById(R.id.tv_current_app)
-        rvAppList = findViewById(R.id.rv_app_list)
+
+
+        tvCPU = findViewById(R.id.tvCPU)
+        lpiCPU = findViewById(R.id.lpiCPU)
+        tvRAM = findViewById(R.id.tvRAM)
+        lpiRAM = findViewById(R.id.lpiRAM)
+        tvTemp = findViewById(R.id.tvTemp)
+        lpiTemp = findViewById(R.id.lpiTemp)
 
         // Load apps
         appList = loadInstalledApps()
-        prepareVisibleList()
-
-        adapter = AppStatusAdapterDynamic(visibleList)
-        rvAppList.layoutManager = LinearLayoutManager(this)
-        rvAppList.adapter = adapter
+        startUpdatingStats()
 
         createNotificationChannel()
         startOptimization()
@@ -66,7 +80,68 @@ class OptimizerActivity : AppCompatActivity() {
         fabExit = findViewById(R.id.fabExit)
         fabExit.setOnClickListener { finish() }
 
+
         observeWorker()
+    }
+
+    private fun startUpdatingStats() {
+        handler.post(object : Runnable {
+            override fun run() {
+                updateCPUUsage()
+                updateRAMUsage()
+                updateTemp()
+                handler.postDelayed(this, updateInterval)
+            }
+        })
+    }
+
+    private fun updateCPUUsage() {
+        val usage = cpuReader.readUsage()
+        tvCPU.text = "CPU: $usage%"
+        lpiCPU.progress = usage
+        lpiCPU.setIndicatorColor(
+            when {
+                usage < 50 -> Color.GREEN
+                usage < 75 -> Color.YELLOW
+                else -> Color.RED
+            }
+        )
+    }
+
+    private fun updateRAMUsage() {
+        val am = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        val memInfo = ActivityManager.MemoryInfo()
+        am.getMemoryInfo(memInfo)
+        val usedMB = ((memInfo.totalMem - memInfo.availMem) / 1024 / 1024).toInt()
+        val totalMB = (memInfo.totalMem / 1024 / 1024).toInt()
+        val percent = (usedMB * 100 / totalMB)
+        tvRAM.text = "RAM: $usedMB/$totalMB MB"
+        lpiRAM.progress = percent
+        lpiRAM.setIndicatorColor(
+            when {
+                percent < 50 -> Color.GREEN
+                percent < 75 -> Color.YELLOW
+                else -> Color.RED
+            }
+        )
+    }
+
+
+    private fun updateTemp() {
+        val batteryIntent = registerReceiver(
+            null,
+            android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
+        )
+        val temp = (batteryIntent?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
+
+        tvTemp.text = "Temp: ${temp}°C"
+        tvTemp.setTextColor(
+            when {
+                temp < 40 -> 0xFF00FF00.toInt() // verde
+                temp < 60 -> 0xFFFFFF00.toInt() // amarillo
+                else -> 0xFFFF0000.toInt()    // rojo
+            }
+        )
     }
 
     private fun observeWorker() {
@@ -89,12 +164,6 @@ class OptimizerActivity : AppCompatActivity() {
                 }
     }
 
-    private fun prepareVisibleList() {
-        //initialize visibleList with max 8 apps
-        visibleList.clear()
-        val toAdd = appList.take(8)
-        visibleList.addAll(toAdd)
-    }
 
     private fun loadInstalledApps(): MutableList<AppStatusDynamic> {
         val pm = packageManager
@@ -116,7 +185,8 @@ class OptimizerActivity : AppCompatActivity() {
 
     private fun startOptimization() {
         // Preparar array de packageNames
-        val packageNames = appList.map { it.packageName }.toTypedArray().toList().toTypedArray() as Array<String?>
+        val packageNames =
+            appList.map { it.packageName }.toTypedArray().toList().toTypedArray() as Array<String?>
 
         val inputData = Data.Builder()
             .putStringArray(OptimizerWorker.PACKAGE_LIST_KEY, packageNames)
@@ -134,8 +204,10 @@ class OptimizerActivity : AppCompatActivity() {
                 when (workInfo?.state) {
                     WorkInfo.State.RUNNING -> {
                         val progress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
-                        val currentPackage = workInfo.progress.getString(OptimizerWorker.CURRENT_PACKAGE_KEY)
-                        val currentApp = workInfo.progress.getString(OptimizerWorker.CURRENT_APP_NAME_KEY)
+                        val currentPackage =
+                            workInfo.progress.getString(OptimizerWorker.CURRENT_PACKAGE_KEY)
+                        val currentApp =
+                            workInfo.progress.getString(OptimizerWorker.CURRENT_APP_NAME_KEY)
 
                         tvPercentage.text = "$progress%"
                         progressBar.progress = progress
@@ -143,68 +215,38 @@ class OptimizerActivity : AppCompatActivity() {
                         // upgrade text and icon
                         tvCurrentApp.text = "Optimizing ${currentApp ?: ""}"
                         val appIcon: Drawable? = try {
-                            if (currentPackage != null) packageManager.getApplicationIcon(currentPackage)
+                            if (currentPackage != null) packageManager.getApplicationIcon(
+                                currentPackage
+                            )
                             else null
                         } catch (e: PackageManager.NameNotFoundException) {
                             getDrawable(R.drawable.ic_android)
                         }
                         findViewById<ImageView>(R.id.ivCurrentAppIcon).setImageDrawable(appIcon)
 
-                        updateAppStatus(currentApp, progress)
+
                         showInProgressNotification(progress, currentApp ?: "")
                     }
+
                     WorkInfo.State.SUCCEEDED -> {
                         tvPercentage.text = "100%"
                         progressBar.progress = 100
                         tvCurrentApp.text = "Optimized!!!"
-                        markAllDone()
                         showCompletionNotification()
                         fabExit.show()
                         Toast.makeText(this, "Optimización completada!", Toast.LENGTH_SHORT).show()
                     }
+
                     WorkInfo.State.FAILED -> {
                         showErrorNotification()
                         tvCurrentApp.text = "Optimization failed"
                         fabExit.show()
                         Toast.makeText(this, "Optimización failed!", Toast.LENGTH_SHORT).show()
                     }
+
                     else -> {}
                 }
             }
-    }
-
-    private fun updateAppStatus(currentApp: String?, progress: Int) {
-        //  We search for the app in the actual queue.
-        val appIndex = appList.indexOfFirst { it.name == currentApp }
-        if (appIndex != -1) {
-            val app = appList[appIndex]
-            app.status = Status.DONE
-
-            // We update visibleList if it is visible.
-            val visibleIndex = visibleList.indexOf(app)
-            if (visibleIndex != -1) {
-                visibleList.removeAt(visibleIndex)
-                adapter.notifyItemRemoved(visibleIndex)
-            }
-
-            //We add the next app from the queue if there is space.
-            val nextIndex = visibleList.size
-            if (nextIndex < 8 && appIndex + 1 < appList.size) {
-                val nextApp = appList[appIndex + 1]
-                if (!visibleList.contains(nextApp)) {
-                    visibleList.add(nextApp)
-                    adapter.notifyItemInserted(visibleList.size - 1)
-                }
-            }
-        }
-    }
-
-    private fun markAllDone() {
-        visibleList.forEachIndexed { index, app ->
-            app.status = Status.DONE
-            adapter.notifyItemChanged(index)
-        }
-        appList.forEach { it.status = Status.DONE }
     }
 
     private fun createNotificationChannel() {
