@@ -10,16 +10,20 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import mx.xperience.optimizer.R
 import mx.xperience.optimizer.ui.adapters.AppStatusAdapterDynamic
 import mx.xperience.optimizer.ui.adapters.AppStatusDynamic
@@ -36,6 +40,8 @@ class OptimizerActivity : AppCompatActivity() {
     private lateinit var appList: MutableList<AppStatusDynamic>
     private val visibleList: MutableList<AppStatusDynamic> = mutableListOf()
     private lateinit var adapter: AppStatusAdapterDynamic
+
+    private lateinit var fabExit: FloatingActionButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +62,31 @@ class OptimizerActivity : AppCompatActivity() {
 
         createNotificationChannel()
         startOptimization()
+
+        fabExit = findViewById(R.id.fabExit)
+        fabExit.setOnClickListener { finish() }
+
+        observeWorker()
+    }
+
+    private fun observeWorker() {
+        val optimizerWorkRequest = OneTimeWorkRequestBuilder<OptimizerWorker>()
+            .build()
+        val workId = optimizerWorkRequest.id
+        val workManager = WorkManager.getInstance(applicationContext)
+
+            workManager.getWorkInfoByIdLiveData(workId)
+                .observe(this) { workInfo ->
+                    if (workInfo != null) {
+                        val progress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
+                        // actualizar ProgressBar si tienes
+                        if (progress == 100 && workInfo.state.isFinished) {
+                            // mostrar FAB
+                            fabExit.show()
+                            Toast.makeText(this, "Optimización completada!", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
     }
 
     private fun prepareVisibleList() {
@@ -103,11 +134,21 @@ class OptimizerActivity : AppCompatActivity() {
                 when (workInfo?.state) {
                     WorkInfo.State.RUNNING -> {
                         val progress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
+                        val currentPackage = workInfo.progress.getString(OptimizerWorker.CURRENT_PACKAGE_KEY)
                         val currentApp = workInfo.progress.getString(OptimizerWorker.CURRENT_APP_NAME_KEY)
 
                         tvPercentage.text = "$progress%"
                         progressBar.progress = progress
+
+                        // upgrade text and icon
                         tvCurrentApp.text = "Optimizing ${currentApp ?: ""}"
+                        val appIcon: Drawable? = try {
+                            if (currentPackage != null) packageManager.getApplicationIcon(currentPackage)
+                            else null
+                        } catch (e: PackageManager.NameNotFoundException) {
+                            getDrawable(R.drawable.ic_android)
+                        }
+                        findViewById<ImageView>(R.id.ivCurrentAppIcon).setImageDrawable(appIcon)
 
                         updateAppStatus(currentApp, progress)
                         showInProgressNotification(progress, currentApp ?: "")
@@ -115,11 +156,17 @@ class OptimizerActivity : AppCompatActivity() {
                     WorkInfo.State.SUCCEEDED -> {
                         tvPercentage.text = "100%"
                         progressBar.progress = 100
+                        tvCurrentApp.text = "Optimized!!!"
                         markAllDone()
                         showCompletionNotification()
+                        fabExit.show()
+                        Toast.makeText(this, "Optimización completada!", Toast.LENGTH_SHORT).show()
                     }
                     WorkInfo.State.FAILED -> {
                         showErrorNotification()
+                        tvCurrentApp.text = "Optimization failed"
+                        fabExit.show()
+                        Toast.makeText(this, "Optimización failed!", Toast.LENGTH_SHORT).show()
                     }
                     else -> {}
                 }

@@ -62,6 +62,14 @@
     </FrameLayout>
 
     <!-- Texto informativo -->
+    <ImageView
+        android:id="@+id/ivCurrentAppIcon"
+        android:layout_width="25dp"
+        android:layout_height="27dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="10dp"
+        android:layout_gravity="center_horizontal"
+        android:contentDescription="app_icon" />
     <TextView
         android:id="@+id/tv_current_app"
         android:layout_width="wrap_content"
@@ -81,4 +89,16 @@
         android:layout_weight="2"
         android:clipToPadding="false"
         android:paddingBottom="16dp"/>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabExit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:visibility="gone"
+        android:contentDescription="Salir"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        app:backgroundTint="#D32F2F"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 </LinearLayout>
