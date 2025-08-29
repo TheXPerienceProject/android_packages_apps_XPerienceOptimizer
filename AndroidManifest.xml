@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPDX-License-Identifier: Apache-2.0
-     Copyright 2025 XPerience Project
--->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="mx.xperience.optimizer"
     android:sharedUserId="android.uid.system">
@@ -13,7 +10,7 @@
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES"/>
 
     <application
-        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
+        android:theme="@style/Theme.XPerienceOptimizer"
         android:supportsRtl="true">
 
         <!-- Actividad principal -->
@@ -21,7 +18,7 @@
             android:name=".ui.OptimizerActivity"
             android:exported="true"
             android:excludeFromRecents="true"
-            android:theme="@style/Theme.AppCompat.NoActionBar">
+            android:theme="@style/Theme.XPerienceOptimizer">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <!-- remove -->
