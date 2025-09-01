@@ -14,7 +14,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -49,14 +51,17 @@ class OptimizerActivity : AppCompatActivity() {
     private lateinit var tvPercentage: TextView
     private lateinit var tvCurrentApp: TextView
     private lateinit var progressBar: ProgressBar
+    private lateinit var coresDynamicContainer: LinearLayout
+    private val coreViews = mutableListOf<View>()
+    private var coresInitialized = false
 
     private lateinit var appList: MutableList<AppStatusDynamic>
 
     private lateinit var fabExit: FloatingActionButton
 
     //new textview for detailed cpu info
-    private lateinit var tvCPUCores: TextView
-    private lateinit var tvCPUFreqs: TextView
+    //private lateinit var tvCPUCores: TextView
+    //private lateinit var tvCPUFreqs: TextView
 
     private val handler = Handler(Looper.getMainLooper())
     private val updateInterval = 1000L // 1 sec
@@ -79,9 +84,10 @@ class OptimizerActivity : AppCompatActivity() {
         lpiTemp = findViewById(R.id.lpiTemp)
 
         // Nuevos TextView para información de cores
-        tvCPUCores = findViewById(R.id.tvCPUCores)
-        tvCPUFreqs = findViewById(R.id.tvCPUFreqs)
-        coresContainer = findViewById(R.id.coresContainer)
+        //tvCPUCores = findViewById(R.id.tvCPUCores)
+        //tvCPUFreqs = findViewById(R.id.tvCPUFreqs)
+        //coresContainer = findViewById(R.id.coresContainer)
+        coresDynamicContainer = findViewById(R.id.coresDynamicContainer)
 
         // Load apps
         appList = loadInstalledApps()
@@ -95,6 +101,11 @@ class OptimizerActivity : AppCompatActivity() {
 
 
         observeWorker()
+
+        handler.postDelayed({
+            initializeCoresOnce()
+        }, 1500)
+        
     }
 
     private fun startUpdatingStats() {
@@ -108,57 +119,88 @@ class OptimizerActivity : AppCompatActivity() {
         })
     }
 
-    private fun updateCpuCoresVisual(usageData: CpuUsageReader.CpuUsageData) {
-        coresContainer.removeAllViews()
+    private fun initializeCoresOnce() {
+        if (coresInitialized) return
     
-        usageData.coreUsages.forEachIndexed { index, usage ->
-            val freq = if (index < usageData.coreFrequencies.size) {
-                usageData.coreFrequencies[index]
-            } else {
-                0
+        val usageData = cpuReader.readUsage()
+        val totalCores = usageData.coreUsages.size
+    
+        coresDynamicContainer.removeAllViews()
+        coreViews.clear()
+    
+        // Crear filas con máximo 4 cores cada una
+        var currentRow: LinearLayout? = null
+    
+        for (i in 0 until totalCores) {
+            // Crear nueva fila cada 4 cores
+            if (i % 4 == 0) {
+                currentRow = LinearLayout(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER
+                    if (i > 0) setPadding(0, 8.dpToPx(), 0, 0) // Espacio entre filas
+                }
+                coresDynamicContainer.addView(currentRow)
             }
-
+        
+            // Inflar la cardview para cada core
             val coreCard = LayoutInflater.from(this)
-                .inflate(R.layout.item_core_card, coresContainer, false)
+                .inflate(R.layout.item_core_card, currentRow, false)
+        
+            currentRow?.addView(coreCard)
+            coreViews.add(coreCard)
+        }
+    
+        coresInitialized = true
+        updateCpuCoresVisual(usageData) // Primera actualización
+    }
 
-            val tvCoreTitle = coreCard.findViewById<TextView>(R.id.tvCoreTitle)
-            val progressCore = coreCard.findViewById<ProgressBar>(R.id.progressCore)
-            val tvCoreUsage = coreCard.findViewById<TextView>(R.id.tvCoreUsage)
-            val tvCoreFreq = coreCard.findViewById<TextView>(R.id.tvCoreFreq)
+    // Extensión para convertir dp a px
+    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 
-            tvCoreTitle.text = "C$index"
-            progressCore.progress = usage
-            tvCoreUsage.text = "$usage%"
-            tvCoreFreq.text = "${freq}MHz"
+    private fun updateCpuCoresVisual(usageData: CpuUsageReader.CpuUsageData) {
+        // Si los cores no están inicializados, salir (se inicializarán después)
+        if (!coresInitialized) return
+    
+        // Actualizar cada core visible
+        usageData.coreUsages.forEachIndexed { index, usage ->
+            if (index < coreViews.size) {
+                val freq = if (index < usageData.coreFrequencies.size) {
+                    usageData.coreFrequencies[index]
+                } else {
+                    0
+                }
 
-            val color = when {
-                usage < 50 -> Color.GREEN
-                usage < 75 -> Color.YELLOW
-                else -> Color.RED
+                val coreCard = coreViews[index]
+                val tvCoreTitle = coreCard.findViewById<TextView>(R.id.tvCoreTitle)
+                val progressCore = coreCard.findViewById<ProgressBar>(R.id.progressCore)
+                val tvCoreUsage = coreCard.findViewById<TextView>(R.id.tvCoreUsage)
+                val tvCoreFreq = coreCard.findViewById<TextView>(R.id.tvCoreFreq)
+
+                // Solo actualizar valores
+                tvCoreTitle.text = "C$index"
+                progressCore.progress = usage
+                tvCoreUsage.text = "$usage%"
+                tvCoreFreq.text = "${freq}MHz"
+
+                // Color según el uso
+                val color = when {
+                    usage < 50 -> Color.GREEN
+                    usage < 75 -> Color.YELLOW
+                    else -> Color.RED
+                }
+                progressCore.progressTintList = ColorStateList.valueOf(color)
+                tvCoreUsage.setTextColor(color)
             }
-
-            progressCore.progressTintList = ColorStateList.valueOf(color)
-            tvCoreUsage.setTextColor(color)
-
-            // Animación con delay escalonado
-            coreCard.alpha = 0f
-            coreCard.scaleX = 0.8f
-            coreCard.scaleY = 0.8f
-            coresContainer.addView(coreCard)
-
-            coreCard.animate()
-                .alpha(1f)
-                .scaleX(1f)
-                .scaleY(1f)
-                .setDuration(400)
-                .setStartDelay(index * 100L) // ← Delay escalonado
-                .start()
         }
     }
 
     private fun updateCPUUsage() {
         val usageData = cpuReader.readUsage()
-
+    
         // Uso total
         tvCPU.text = "CPU: ${usageData.totalUsage}%"
         lpiCPU.progress = usageData.totalUsage
@@ -169,24 +211,9 @@ class OptimizerActivity : AppCompatActivity() {
                 else -> Color.RED
             }
         )
-
-        // ¡LLAMAR AQUÍ LA NUEVA FUNCIÓN!
+    
+        // Actualizar cores (si ya están inicializados)
         updateCpuCoresVisual(usageData)
-
-        // Mantener los TextView por si acaso (ocultos)
-        val coreUsageText = StringBuilder("Cores: ")
-        usageData.coreUsages.forEachIndexed { index, usage ->
-            coreUsageText.append("C$index:${usage}% ")
-        }
-        tvCPUCores.text = coreUsageText.toString()
-
-        if (usageData.coreFrequencies.isNotEmpty()) {
-            val freqText = StringBuilder("Freqs: ")
-            usageData.coreFrequencies.forEachIndexed { index, freq ->
-                freqText.append("C$index:${freq}MHz ")
-            }
-            tvCPUFreqs.text = freqText.toString()
-        }
     }
 
     private fun updateRAMUsage() {

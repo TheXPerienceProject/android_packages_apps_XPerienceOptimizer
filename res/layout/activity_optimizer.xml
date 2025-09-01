@@ -113,44 +113,14 @@
                 android:layout_marginTop="8dp"
                 app:trackColor="@color/gray_light"
                 app:indicatorColor="@color/green"/>
-            
-            <!-- Después de lpiCPU -->
-            <HorizontalScrollView
-                android:id="@+id/coresScrollView"
+        
+            <!-- Container dinámico para cores - MÁXIMO 4 POR FILA -->
+            <LinearLayout
+                android:id="@+id/coresDynamicContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:id="@+id/coresContainer"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="4dp" />
-
-            </HorizontalScrollView>
-
-        <!-- Mantén los TextView de info por si acaso -->
-        <TextView
-            android:id="@+id/tvCPUCores"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textSize="10sp"
-            android:textColor="@color/gray_light"
-            android:fontFamily="@*android:string/config_bodyFontFamily"
-            android:visibility="gone" /> <!-- Ocultos por ahora -->
-
-        <TextView
-            android:id="@+id/tvCPUFreqs"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:textSize="10sp"
-            android:textColor="@color/gray_light"
-            android:fontFamily="@*android:string/config_bodyFontFamily"
-            android:visibility="gone" /> <!-- Ocultos por ahora -->
+                android:orientation="vertical"
+                android:layout_marginTop="12dp" />
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>
