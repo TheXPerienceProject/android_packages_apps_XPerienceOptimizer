@@ -50,6 +50,10 @@ class OptimizerActivity : AppCompatActivity() {
 
     private lateinit var fabExit: FloatingActionButton
 
+    //new textview for detailed cpu info
+    private lateinit var tvCPUCores: TextView
+    private lateinit var tvCPUFreqs: TextView
+
     private val handler = Handler(Looper.getMainLooper())
     private val updateInterval = 1000L // 1 sec
     private val cpuReader = CpuUsageReader()
@@ -69,6 +73,10 @@ class OptimizerActivity : AppCompatActivity() {
         lpiRAM = findViewById(R.id.lpiRAM)
         tvTemp = findViewById(R.id.tvTemp)
         lpiTemp = findViewById(R.id.lpiTemp)
+
+        // Nuevos TextView para información de cores
+        tvCPUCores = findViewById(R.id.tvCPUCores)
+        tvCPUFreqs = findViewById(R.id.tvCPUFreqs)
 
         // Load apps
         appList = loadInstalledApps()
@@ -96,16 +104,40 @@ class OptimizerActivity : AppCompatActivity() {
     }
 
     private fun updateCPUUsage() {
-        val usage = cpuReader.readUsage()
-        tvCPU.text = "CPU: $usage%"
-        lpiCPU.progress = usage
+        val usageData = cpuReader.readUsage()
+    
+        // El porcentaje total se actualizará automáticamente después de la primera lectura
+        tvCPU.text = "CPU: ${usageData.totalUsage}%"
+        lpiCPU.progress = usageData.totalUsage
         lpiCPU.setIndicatorColor(
             when {
-                usage < 50 -> Color.GREEN
-                usage < 75 -> Color.YELLOW
+                usageData.totalUsage < 50 -> Color.GREEN
+                usageData.totalUsage < 75 -> Color.YELLOW
                 else -> Color.RED
             }
         )
+    
+        // Mostrar uso por cores
+        val coreUsageText = StringBuilder("Cores: ")
+        usageData.coreUsages.forEachIndexed { index, usage ->
+            coreUsageText.append("C$index:${usage}% ")
+            if ((index + 1) % 4 == 0 && index != usageData.coreUsages.size - 1) {
+                coreUsageText.append("\n       ")
+            }
+        }
+        tvCPUCores.text = coreUsageText.toString()
+    
+        // Mostrar frecuencias
+        if (usageData.coreFrequencies.isNotEmpty()) {
+            val freqText = StringBuilder("Freqs: ")
+            usageData.coreFrequencies.forEachIndexed { index, freq ->
+                freqText.append("C$index:${freq}MHz ")
+                if ((index + 1) % 4 == 0 && index != usageData.coreFrequencies.size - 1) {
+                    freqText.append("\n       ")
+                }
+            }
+            tvCPUFreqs.text = freqText.toString()
+        }
     }
 
     private fun updateRAMUsage() {

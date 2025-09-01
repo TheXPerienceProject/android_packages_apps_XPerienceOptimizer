@@ -52,6 +52,7 @@
                     android:text="0%"
                     android:textSize="28sp"
                     android:textStyle="bold"
+                    android:fontFamily="@*android:string/config_bodyFontFamily"
                     android:textColor="@color/gray_light"
                     android:layout_centerInParent="true"/>
             </RelativeLayout>
@@ -73,6 +74,7 @@
         android:text="Optimizando aplicaciones..."
         android:textSize="16sp"
         android:ellipsize="end"
+        android:fontFamily="@*android:string/config_bodyFontFamily"
         android:textColor="@color/gray_light"
         android:layout_gravity="center_horizontal"
         android:paddingTop="4dp"
@@ -101,6 +103,7 @@
                 android:layout_height="wrap_content"
                 android:text="CPU: 0%"
                 android:textSize="16sp"
+                android:fontFamily="@*android:string/config_bodyFontFamily"
                 android:textColor="@color/gray_light"/>
 
             <com.google.android.material.progressindicator.LinearProgressIndicator
@@ -110,6 +113,27 @@
                 android:layout_marginTop="8dp"
                 app:trackColor="@color/gray_light"
                 app:indicatorColor="@color/green"/>
+            <!-- Añadir aquí los TextView para los cores -->
+            <TextView
+                android:id="@+id/tvCPUCores"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textSize="10sp"
+                android:textColor="@color/gray_light"
+                android:fontFamily="@*android:string/config_bodyFontFamily"
+                android:text="Cores: C0:0% C1:0% C2:0% C3:0%"/>
+
+            <TextView
+                android:id="@+id/tvCPUFreqs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="10sp"
+                android:textColor="@color/gray_light"
+                android:fontFamily="@*android:string/config_bodyFontFamily"
+                android:text="Freqs: C0:0MHz C1:0MHz C2:0MHz C3:0MHz"/>
+
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
@@ -136,6 +160,7 @@
                 android:layout_height="wrap_content"
                 android:text="RAM: 0/0 MB"
                 android:textSize="16sp"
+                android:fontFamily="@*android:string/config_bodyFontFamily"
                 android:textColor="@color/gray_light"/>
 
             <com.google.android.material.progressindicator.LinearProgressIndicator
@@ -171,6 +196,7 @@
                 android:layout_height="wrap_content"
                 android:text="Temp: 0°C"
                 android:textSize="16sp"
+                android:fontFamily="@*android:string/config_bodyFontFamily"
                 android:textColor="@color/gray_light"/>
 
             <com.google.android.material.progressindicator.LinearProgressIndicator
@@ -178,6 +204,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="12dp"
                 android:layout_marginTop="8dp"
+                android:fontFamily="@*android:string/config_bodyFontFamily"
                 app:trackColor="@color/gray_light"
                 app:indicatorColor="@color/green"/>
         </LinearLayout>
