@@ -113,26 +113,44 @@
                 android:layout_marginTop="8dp"
                 app:trackColor="@color/gray_light"
                 app:indicatorColor="@color/green"/>
-            <!-- Añadir aquí los TextView para los cores -->
-            <TextView
-                android:id="@+id/tvCPUCores"
+            
+            <!-- Después de lpiCPU -->
+            <HorizontalScrollView
+                android:id="@+id/coresScrollView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:textSize="10sp"
-                android:textColor="@color/gray_light"
-                android:fontFamily="@*android:string/config_bodyFontFamily"
-                android:text="Cores: C0:0% C1:0% C2:0% C3:0%"/>
+                android:scrollbars="none">
 
-            <TextView
-                android:id="@+id/tvCPUFreqs"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textSize="10sp"
-                android:textColor="@color/gray_light"
-                android:fontFamily="@*android:string/config_bodyFontFamily"
-                android:text="Freqs: C0:0MHz C1:0MHz C2:0MHz C3:0MHz"/>
+                <LinearLayout
+                    android:id="@+id/coresContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="4dp" />
+
+            </HorizontalScrollView>
+
+        <!-- Mantén los TextView de info por si acaso -->
+        <TextView
+            android:id="@+id/tvCPUCores"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="10sp"
+            android:textColor="@color/gray_light"
+            android:fontFamily="@*android:string/config_bodyFontFamily"
+            android:visibility="gone" /> <!-- Ocultos por ahora -->
+
+        <TextView
+            android:id="@+id/tvCPUFreqs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="10sp"
+            android:textColor="@color/gray_light"
+            android:fontFamily="@*android:string/config_bodyFontFamily"
+            android:visibility="gone" /> <!-- Ocultos por ahora -->
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>

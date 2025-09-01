@@ -19,7 +19,11 @@
     <!-- Colores de texto -->
     <color name="percentage_text">#FF2B2B</color>
     <color name="app_name_text">#000000</color>
-    <color name="green">#27AE60</color>
     <color name="onSurface">#2C3E50</color>
     <color name="error_red">#C0392B</color>
+
+    <color name="green">#4CAF50</color>
+    <color name="yellow">#FFC107</color>
+    <color name="red">#F44336</color>
+    <color name="white">#FFFFFF</color>
 </resources>
