@@ -45,6 +45,10 @@ class OptimizerWorker(
             }
 
             for ((index, packageInfo) in installedPackages.withIndex()) {
+                if (isStopped) {
+                    Log.w(TAG, "Worker was stopped by the system. Aborting optimization loop.")
+                    return@withContext Result.retry()
+                }
                 val packageName = packageInfo.packageName
                 Log.d(TAG, "Procesando aplicación #${index + 1}: $packageName")
 
@@ -81,6 +85,7 @@ class OptimizerWorker(
             Result.success()
 
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Error fatal en el proceso de optimización", e)
             Result.failure()
         }
