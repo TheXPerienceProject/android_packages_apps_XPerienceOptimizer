@@ -6,6 +6,7 @@
     <string name="app_name">Optimizador</string>
     <string name="optimization_title">Optimización del dispositivo</string>
     <string name="optimize_title">Optimización del dispositivo</string>
+    <string name="app_optimisation">Optimización de aplicaciones</string>
     <!-- Canal de notificaciones -->
     <string name="channel_name">Optimizer Notifications</string>
     <string name="channel_description">Notificaciones para el progreso de la optimización y finalización</string>
