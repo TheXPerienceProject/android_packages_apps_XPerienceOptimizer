@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2025 XPerience Project
+// Copyright 2026 XPerience Project
 
 package mx.xperience.optimizer.workers
 
@@ -32,39 +32,29 @@ class OptimizerWorker(
 
         try {
             val pm = applicationContext.packageManager
-            val installedPackages = pm.getInstalledPackages(PackageManager.GET_META_DATA)
-                .filterNot { it.packageName == applicationContext.packageName }
-                .sortedBy { it.packageName.lowercase() }
-                .also {
-                    Log.d(TAG, "Optimizando ${it.size} aplicaciones (excluyendo esta app)")
-                }
-
-            if (installedPackages.isEmpty()) {
-                Log.w(TAG, "No se encontraron aplicaciones para optimizar")
+            
+            // Obtener la lista de paquetes desde la actividad para asegurar sincronización
+            val packageList = inputData.getStringArray(PACKAGE_LIST_KEY)
+            
+            if (packageList == null || packageList.isEmpty()) {
+                Log.e(TAG, "No se recibió lista de paquetes para optimizar")
                 return@withContext Result.failure()
             }
 
-            for ((index, packageInfo) in installedPackages.withIndex()) {
-                if (isStopped) {
-                    Log.w(TAG, "Worker was stopped by the system. Aborting optimization loop.")
-                    return@withContext Result.retry()
-                }
-                val packageName = packageInfo.packageName
+            Log.d(TAG, "Optimizando ${packageList.size} aplicaciones recibidas")
+
+            for ((index, packageName) in packageList.withIndex()) {
                 Log.d(TAG, "Procesando aplicación #${index + 1}: $packageName")
 
                 val appName = try {
                     val appInfo = pm.getApplicationInfo(packageName, 0)
-                    pm.getApplicationLabel(appInfo).toString().also {
-                        Log.v(TAG, "Nombre de aplicación obtenido: $it")
-                    }
+                    pm.getApplicationLabel(appInfo).toString()
                 } catch (e: NameNotFoundException) {
-                    Log.w(TAG, "No se pudo obtener nombre para $packageName, usando nombre de paquete")
                     packageName
                 }
 
-                val progress = ((index + 1) * 100 / installedPackages.size)
-                Log.d(TAG, "Progreso: $progress% - Optimizando: $appName")
-
+                val progress = ((index + 1) * 100 / packageList.size)
+                
                 // Reportar estado a la UI
                 setProgress(
                     workDataOf(
@@ -85,17 +75,14 @@ class OptimizerWorker(
             Result.success()
 
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Error fatal en el proceso de optimización", e)
             Result.failure()
         }
     }
 
     private suspend fun optimizePackage(pm: PackageManager, packageName: String) {
-        Log.d(TAG, "Intentando optimizar: $packageName")
-
         try {
-            // Method 1: Hidden API
+            // Method 1: Hidden API (Reflection)
             try {
                 val method = pm.javaClass.getDeclaredMethod(
                     "compilePackage",
@@ -103,32 +90,14 @@ class OptimizerWorker(
                     Int::class.javaPrimitiveType
                 )
                 method.isAccessible = true
-                Log.d(TAG, "Usando compilePackage para $packageName")
-                method.invoke(pm, packageName, 4)
-                Log.i(TAG, "$packageName optimizado con éxito (método system)")
+                method.invoke(pm, packageName, 4) // 4 = speed-profile/everything depending on OS
                 return
-            } catch (e: NoSuchMethodException) {
-                Log.w(TAG, "compilePackage no disponible para $packageName")
+            } catch (e: Exception) {
+                // Ignore and try next method
             }
 
-            // Method 2: Alternative
-            try {
-                Log.d(TAG, "Intentando método alternativo para $packageName")
-                pm.setApplicationEnabledSetting(
-                    packageName,
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                    PackageManager.DONT_KILL_APP
-                )
-                Log.i(TAG, "$packageName optimizado con éxito (método alternativo)")
-                return
-            } catch (e: SecurityException) {
-                Log.w(TAG, "Sin permisos para optimizar $packageName", e)
-            }
-
-            // Method 3: Simulation for testing
-            Log.d(TAG, "Simulando optimización para $packageName")
-            delay(200)
-            Log.i(TAG, "$packageName - simulación completada")
+            // Method 2: Fallback for local simulation if not system app
+            delay(100)
 
         } catch (e: Exception) {
             Log.e(TAG, "Error optimizando $packageName", e)

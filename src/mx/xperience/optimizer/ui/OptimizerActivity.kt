@@ -1,300 +1,78 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2025 XPerience Project
+// Copyright 2026 XPerience Project
 
 package mx.xperience.optimizer.ui
 
-import android.app.ActivityManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
-import android.graphics.Color
-import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequest
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.progressindicator.LinearProgressIndicator
-import mx.xperience.optimizer.CpuUsageReader
 import mx.xperience.optimizer.R
-import mx.xperience.optimizer.ui.adapters.AppStatusDynamic
+import mx.xperience.optimizer.ui.theme.XPerienceOptimizerTheme
 import mx.xperience.optimizer.ui.adapters.Status
 import mx.xperience.optimizer.workers.OptimizerWorker
 
-import java.io.File
-
 class OptimizerActivity : AppCompatActivity() {
 
-    private lateinit var tvCPU: TextView
-    private lateinit var lpiCPU: LinearProgressIndicator
-    private lateinit var coresContainer: LinearLayout
-    private lateinit var tvRAM: TextView
-    private lateinit var lpiRAM: LinearProgressIndicator
-    private lateinit var tvTemp: TextView
-    private lateinit var lpiTemp: LinearProgressIndicator
-    private lateinit var tvPercentage: TextView
-    private lateinit var tvCurrentApp: TextView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var coresDynamicContainer: LinearLayout
-    private val coreViews = mutableListOf<View>()
-    private var coresInitialized = false
-
-    private lateinit var appList: MutableList<AppStatusDynamic>
-
-    private lateinit var fabExit: FloatingActionButton
-
-    //new textview for detailed cpu info
-    //private lateinit var tvCPUCores: TextView
-    //private lateinit var tvCPUFreqs: TextView
-
-    private val handler = Handler(Looper.getMainLooper())
-    private val updateInterval = 1000L // 1 sec
-    private val cpuReader = CpuUsageReader()
+    private val appList = mutableStateListOf<AppUiState>()
+    private var optimizationProgress by mutableStateOf(0)
+    private var currentAppName by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_optimizer)
-
-        progressBar = findViewById(R.id.circular_progress)
-        tvPercentage = findViewById(R.id.tv_percentage)
-        tvCurrentApp = findViewById(R.id.tv_current_app)
-
-
-        tvCPU = findViewById(R.id.tvCPU)
-        lpiCPU = findViewById(R.id.lpiCPU)
-        tvRAM = findViewById(R.id.tvRAM)
-        lpiRAM = findViewById(R.id.lpiRAM)
-        tvTemp = findViewById(R.id.tvTemp)
-        lpiTemp = findViewById(R.id.lpiTemp)
-
-        // Nuevos TextView para información de cores
-        //tvCPUCores = findViewById(R.id.tvCPUCores)
-        //tvCPUFreqs = findViewById(R.id.tvCPUFreqs)
-        //coresContainer = findViewById(R.id.coresContainer)
-        coresDynamicContainer = findViewById(R.id.coresDynamicContainer)
-
-        // Load apps
-        appList = loadInstalledApps()
-        startUpdatingStats()
-
+        
+        loadInstalledApps()
         createNotificationChannel()
         startOptimization()
 
-        fabExit = findViewById(R.id.fabExit)
-        fabExit.setOnClickListener { finish() }
-
-
-        observeWorker()
-
-        handler.postDelayed({
-            initializeCoresOnce()
-        }, 1500)
-        
-    }
-
-    private fun startUpdatingStats() {
-        handler.post(object : Runnable {
-            override fun run() {
-                updateCPUUsage()
-                updateRAMUsage()
-                updateTemp()
-                handler.postDelayed(this, updateInterval)
-            }
-        })
-    }
-
-    private fun initializeCoresOnce() {
-        if (coresInitialized) return
-    
-        val usageData = cpuReader.readUsage()
-        val totalCores = usageData.coreUsages.size
-    
-        coresDynamicContainer.removeAllViews()
-        coreViews.clear()
-    
-        // Crear filas con máximo 4 cores cada una
-        var currentRow: LinearLayout? = null
-    
-        for (i in 0 until totalCores) {
-            // Crear nueva fila cada 4 cores
-            if (i % 4 == 0) {
-                currentRow = LinearLayout(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER
-                    if (i > 0) setPadding(0, 8.dpToPx(), 0, 0) // Espacio entre filas
-                }
-                coresDynamicContainer.addView(currentRow)
-            }
-        
-            // Inflar la cardview para cada core
-            val coreCard = LayoutInflater.from(this)
-                .inflate(R.layout.item_core_card, currentRow, false)
-        
-            currentRow?.addView(coreCard)
-            coreViews.add(coreCard)
-        }
-    
-        coresInitialized = true
-        updateCpuCoresVisual(usageData) // Primera actualización
-    }
-
-    // Extensión para convertir dp a px
-    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
-
-    private fun updateCpuCoresVisual(usageData: CpuUsageReader.CpuUsageData) {
-        // Si los cores no están inicializados, salir (se inicializarán después)
-        if (!coresInitialized) return
-    
-        // Actualizar cada core visible
-        usageData.coreUsages.forEachIndexed { index, usage ->
-            if (index < coreViews.size) {
-                val freq = if (index < usageData.coreFrequencies.size) {
-                    usageData.coreFrequencies[index]
-                } else {
-                    0
-                }
-
-                val coreCard = coreViews[index]
-                val tvCoreTitle = coreCard.findViewById<TextView>(R.id.tvCoreTitle)
-                val progressCore = coreCard.findViewById<ProgressBar>(R.id.progressCore)
-                val tvCoreUsage = coreCard.findViewById<TextView>(R.id.tvCoreUsage)
-                val tvCoreFreq = coreCard.findViewById<TextView>(R.id.tvCoreFreq)
-
-                // Solo actualizar valores
-                tvCoreTitle.text = "C$index"
-                progressCore.progress = usage
-                tvCoreUsage.text = "$usage%"
-                tvCoreFreq.text = "${freq}MHz"
-
-                // Color según el uso
-                val color = when {
-                    usage < 50 -> Color.GREEN
-                    usage < 75 -> Color.YELLOW
-                    else -> Color.RED
-                }
-                progressCore.progressTintList = ColorStateList.valueOf(color)
-                tvCoreUsage.setTextColor(color)
+        setContent {
+            XPerienceOptimizerTheme {
+                AppOptimizationScreen(
+                    progress = optimizationProgress,
+                    currentAppName = currentAppName,
+                    appList = appList,
+                    onBackClick = { finish() }
+                )
             }
         }
     }
 
-    private fun updateCPUUsage() {
-        val usageData = cpuReader.readUsage()
-    
-        // Uso total
-        tvCPU.text = "CPU: ${usageData.totalUsage}%"
-        lpiCPU.progress = usageData.totalUsage
-        lpiCPU.setIndicatorColor(
-            when {
-                usageData.totalUsage < 50 -> Color.GREEN
-                usageData.totalUsage < 75 -> Color.YELLOW
-                else -> Color.RED
-            }
-        )
-    
-        // Actualizar cores (si ya están inicializados)
-        updateCpuCoresVisual(usageData)
-    }
-
-    private fun updateRAMUsage() {
-        val am = getSystemService(ACTIVITY_SERVICE) as ActivityManager
-        val memInfo = ActivityManager.MemoryInfo()
-        am.getMemoryInfo(memInfo)
-        val usedMB = ((memInfo.totalMem - memInfo.availMem) / 1024 / 1024).toInt()
-        val totalMB = (memInfo.totalMem / 1024 / 1024).toInt()
-        val percent = (usedMB * 100 / totalMB)
-        tvRAM.text = "RAM: $usedMB/$totalMB MB"
-        lpiRAM.progress = percent
-        lpiRAM.setIndicatorColor(
-            when {
-                percent < 50 -> Color.GREEN
-                percent < 75 -> Color.YELLOW
-                else -> Color.RED
-            }
-        )
-    }
-
-
-    private fun updateTemp() {
-        val batteryIntent = registerReceiver(
-            null,
-            android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
-        )
-        val temp = (batteryIntent?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
-
-        tvTemp.text = "Temp: ${temp}°C"
-        tvTemp.setTextColor(
-            when {
-                temp < 40 -> 0xFF00FF00.toInt() // verde
-                temp < 60 -> 0xFFFFFF00.toInt() // amarillo
-                else -> 0xFFFF0000.toInt()    // rojo
-            }
-        )
-    }
-
-    private fun observeWorker() {
-        val optimizerWorkRequest = OneTimeWorkRequestBuilder<OptimizerWorker>()
-            .build()
-        val workId = optimizerWorkRequest.id
-        val workManager = WorkManager.getInstance(applicationContext)
-
-            workManager.getWorkInfoByIdLiveData(workId)
-                .observe(this) { workInfo ->
-                    if (workInfo != null) {
-                        val progress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
-                        // Update progress bar
-                        if (progress == 100 && workInfo.state.isFinished) {
-                            // mostrar FAB
-                            fabExit.show()
-                            Toast.makeText(this, getString(R.string.optimization_completed), Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-    }
-
-
-    private fun loadInstalledApps(): MutableList<AppStatusDynamic> {
+    private fun loadInstalledApps() {
         val pm = packageManager
         val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-            .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
+            .filter { it.packageName != packageName }
             .sortedBy { it.loadLabel(pm).toString() }
 
         val apps = packages.map { appInfo ->
-            AppStatusDynamic(
-                    name = appInfo.loadLabel(pm).toString(),
-                    icon = appInfo.loadIcon(pm),
-                    status = Status.PENDING,
-                    packageName = appInfo.packageName
-                        )
-        }.toMutableList()
-
-        return apps
+            AppUiState(
+                name = appInfo.loadLabel(pm).toString(),
+                icon = BitmapPainter(appInfo.loadIcon(pm).toBitmap().asImageBitmap()),
+                status = Status.PENDING,
+                packageName = appInfo.packageName
+            )
+        }
+        appList.clear()
+        appList.addAll(apps)
     }
 
     private fun startOptimization() {
-        // Preparar array de packageNames
-        val packageNames =
-            appList.map { it.packageName }.toTypedArray().toList().toTypedArray() as Array<String?>
+        val packageNames = appList.map { it.packageName }.toTypedArray<String?>()
 
         val inputData = Data.Builder()
             .putStringArray(OptimizerWorker.PACKAGE_LIST_KEY, packageNames)
@@ -311,50 +89,49 @@ class OptimizerActivity : AppCompatActivity() {
             .observe(this) { workInfo ->
                 when (workInfo?.state) {
                     WorkInfo.State.RUNNING -> {
-                        val progress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
-                        val currentPackage =
-                            workInfo.progress.getString(OptimizerWorker.CURRENT_PACKAGE_KEY)
-                        val currentApp =
-                            workInfo.progress.getString(OptimizerWorker.CURRENT_APP_NAME_KEY)
+                        val currentProgress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
+                        val currentPackage = workInfo.progress.getString(OptimizerWorker.CURRENT_PACKAGE_KEY)
+                        val name = workInfo.progress.getString(OptimizerWorker.CURRENT_APP_NAME_KEY)
 
-                        tvPercentage.text = "$progress%"
-                        progressBar.progress = progress
+                        optimizationProgress = currentProgress
+                        currentAppName = name
 
-                        // upgrade text and icon
-                        tvCurrentApp.text = getString(R.string.optimizing_app, currentApp ?: "")
-                        val appIcon: Drawable? = try {
-                            if (currentPackage != null) packageManager.getApplicationIcon(
-                                currentPackage
-                            )
-                            else null
-                        } catch (e: PackageManager.NameNotFoundException) {
-                            getDrawable(R.drawable.ic_android)
+                        currentPackage?.let {
+                            updateAppStatus(it, Status.RUNNING)
                         }
-                        findViewById<ImageView>(R.id.ivCurrentAppIcon).setImageDrawable(appIcon)
 
-
-                        showInProgressNotification(progress, currentApp ?: "")
+                        showInProgressNotification(currentProgress, name ?: "")
                     }
 
                     WorkInfo.State.SUCCEEDED -> {
-                        tvPercentage.text = "100%"
-                        progressBar.progress = 100
-                        tvCurrentApp.text = getString(R.string.optimized)
+                        optimizationProgress = 100
+                        currentAppName = getString(R.string.optimized)
                         showCompletionNotification()
-                        fabExit.show()
                         Toast.makeText(this, getString(R.string.optimization_completed), Toast.LENGTH_SHORT).show()
                     }
 
                     WorkInfo.State.FAILED -> {
                         showErrorNotification()
-                        tvCurrentApp.text = getString(R.string.optimization_failed)
-                        fabExit.show()
                         Toast.makeText(this, getString(R.string.optimization_failed), Toast.LENGTH_SHORT).show()
                     }
 
                     else -> {}
                 }
             }
+    }
+
+    private fun updateAppStatus(packageName: String, status: Status) {
+        val index = appList.indexOfFirst { it.packageName == packageName }
+        if (index != -1) {
+            val app = appList[index]
+            // Marcar las anteriores como DONE
+            for (i in 0 until index) {
+                if (appList[i].status != Status.DONE) {
+                    appList.set(i, appList[i].copy(status = Status.DONE))
+                }
+            }
+            appList.set(index, app.copy(status = status))
+        }
     }
 
     private fun createNotificationChannel() {
