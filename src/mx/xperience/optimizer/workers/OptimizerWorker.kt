@@ -34,10 +34,14 @@ class OptimizerWorker(
             val pm = applicationContext.packageManager
             
             // Obtener la lista de paquetes desde la actividad para asegurar sincronización
-            val packageList = inputData.getStringArray(PACKAGE_LIST_KEY)
-            
-            if (packageList == null || packageList.isEmpty()) {
-                Log.e(TAG, "No se recibió lista de paquetes para optimizar")
+            val packagesQuery = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                .filter { it.packageName != applicationContext.packageName }
+                .sortedBy { it.loadLabel(pm).toString() }
+
+            val packageList = packagesQuery.map { it.packageName }.toTypedArray()
+
+            if (packageList.isEmpty()) {
+                Log.e(TAG, "No se encontraron aplicaciones para optimizar")
                 return@withContext Result.failure()
             }
 

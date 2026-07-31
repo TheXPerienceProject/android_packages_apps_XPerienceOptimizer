@@ -72,14 +72,9 @@ class OptimizerActivity : AppCompatActivity() {
     }
 
     private fun startOptimization() {
-        val packageNames = appList.map { it.packageName }.toTypedArray<String?>()
-
-        val inputData = Data.Builder()
-            .putStringArray(OptimizerWorker.PACKAGE_LIST_KEY, packageNames)
-            .build()
-
+        // WorkManager tiene un límite de 10KB, por lo que el Worker consultará
+        // los paquetes directamente para evitar excepciones de serialización.
         val workRequest = OneTimeWorkRequest.Builder(OptimizerWorker::class.java)
-            .setInputData(inputData)
             .build()
 
         WorkManager.getInstance(this).enqueue(workRequest)
