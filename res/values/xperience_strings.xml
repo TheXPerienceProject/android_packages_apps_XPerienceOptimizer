@@ -29,4 +29,5 @@
     <string name="system_update_detected">System update detected on boot. Launching optimizer…</string>
     <string name="no_update_detected">No system update detected on boot.</string>
     <string name="log_optimization_start">Starting optimisation process</string>
+    <string name="done">Done</string>
 </resources>
