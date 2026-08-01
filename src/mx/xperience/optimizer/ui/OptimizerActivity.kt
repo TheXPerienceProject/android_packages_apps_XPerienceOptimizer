@@ -10,7 +10,8 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
+//import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -28,7 +29,7 @@ import mx.xperience.optimizer.ui.theme.XPerienceOptimizerTheme
 import mx.xperience.optimizer.ui.adapters.Status
 import mx.xperience.optimizer.workers.OptimizerWorker
 
-class OptimizerActivity : AppCompatActivity() {
+class OptimizerActivity : ComponentActivity() {
 
     private val appList = mutableStateListOf<AppUiState>()
     private var optimizationProgress by mutableStateOf(0)

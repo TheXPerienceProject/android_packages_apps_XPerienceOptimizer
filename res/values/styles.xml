@@ -3,18 +3,17 @@
      Copyright 2025 XPerience Project
 -->
 <resources>
-    <style name="Theme.XPerienceOptimizer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- tus customizaciones -->
+    <style name="Theme.XPerienceOptimizer" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- tus customizaciones 
         <item name="colorPrimary">#9C27B0</item>
         <item name="colorPrimaryVariant">#7B1FA2</item>
         <item name="colorSecondary">#80CBC4</item>
 
         <item name="colorOnSurface">#2C3E50</item>
 
-        <!-- Surface & background -->
         <item name="android:colorBackground">#121212</item>
         <item name="android:windowBackground">#121212</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">#121212</item>
+        <item name="android:navigationBarColor">#121212</item>-->
     </style>
 </resources>
