@@ -6,6 +6,7 @@ package mx.xperience.optimizer.workers
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.PackageManager.NameNotFoundException
+import android.os.ServiceManager
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -13,6 +14,7 @@ import androidx.work.workDataOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import mx.xperience.optimizer.IOptimizerService
 
 class OptimizerWorker(
     context: Context,
@@ -86,23 +88,13 @@ class OptimizerWorker(
 
     private suspend fun optimizePackage(pm: PackageManager, packageName: String) {
         try {
-            // Method 1: Hidden API (Reflection)
-            try {
-                val method = pm.javaClass.getDeclaredMethod(
-                    "compilePackage",
-                    String::class.java,
-                    Int::class.javaPrimitiveType
-                )
-                method.isAccessible = true
-                method.invoke(pm, packageName, 4) // 4 = speed-profile/everything depending on OS
+            val binder = ServiceManager.getService("optimizer") ?: run {
+                Log.e(TAG, "Servicio 'optimizer' no disponible")
                 return
-            } catch (e: Exception) {
-                // Ignore and try next method
             }
-
-            // Method 2: Fallback for local simulation if not system app
-            delay(100)
-
+            val service = IOptimizerService.Stub.asInterface(binder)
+            val ok = service.compilePackage(packageName, "speed-profile")
+            if (!ok) Log.w(TAG, "compilePackage devolvió false para $packageName")
         } catch (e: Exception) {
             Log.e(TAG, "Error optimizando $packageName", e)
         }

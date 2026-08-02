@@ -4,7 +4,8 @@ android_library {
     static_libs: [
         "androidx.work_work-runtime-ktx",
     ],
-    sdk_version: "current",
+    platform_apis: true,
+    //sdk_version: "current",
 }
 
 android_app {
