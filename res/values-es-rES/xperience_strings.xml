@@ -26,4 +26,5 @@
     <string name="system_update_detected">Se ha detectado una actualización del sistema al arrancar. Iniciando optimizador…</string>
     <string name="no_update_detected">No se ha detectado ninguna actualización del sistema al arrancar.</string>
     <string name="log_optimization_start">Iniciando proceso de optimización</string>
+    <string name="done">Listo</string>
 </resources>
