@@ -60,14 +60,24 @@ class OptimizerActivity : ComponentActivity() {
             .filter { it.packageName != packageName }
             .sortedBy { it.loadLabel(pm).toString() }
 
+        val iconSize = 96
+
         val apps = packages.map { appInfo ->
+            val drawable = appInfo.loadIcon(pm)
+
+            val bitmap = drawable.toBitmap(
+                width = iconSize,
+                height = iconSize
+            )
+
             AppUiState(
                 name = appInfo.loadLabel(pm).toString(),
-                icon = BitmapPainter(appInfo.loadIcon(pm).toBitmap().asImageBitmap()),
+                icon = BitmapPainter(bitmap.asImageBitmap()),
                 status = Status.PENDING,
                 packageName = appInfo.packageName
             )
         }
+
         appList.clear()
         appList.addAll(apps)
     }
