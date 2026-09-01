@@ -20,10 +20,14 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.toBitmap
+import androidx.lifecycle.lifecycleScope
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import mx.xperience.optimizer.R
 import mx.xperience.optimizer.ui.theme.XPerienceOptimizerTheme
 import mx.xperience.optimizer.ui.adapters.Status
@@ -37,10 +41,8 @@ class OptimizerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        loadInstalledApps()
+
         createNotificationChannel()
-        startOptimization()
 
         setContent {
             XPerienceOptimizerTheme {
@@ -52,34 +54,40 @@ class OptimizerActivity : ComponentActivity() {
                 )
             }
         }
+        loadInstalledApps()
+        startOptimization()
     }
 
-    private fun loadInstalledApps() {
-        val pm = packageManager
-        val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-            .filter { it.packageName != packageName }
-            .sortedBy { it.loadLabel(pm).toString() }
+    private fun loadInstalledAppsAsync() {
+        lifecycleScope.launch {
+            val apps = withContext(Dispatchers.IO) {
+                val pm = packageManager
+                val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                    .filter { it.packageName != packageName }
+                    .sortedBy { it.loadLabel(pm).toString() }
 
-        val iconSize = 96
+            val iconSize = 96
 
-        val apps = packages.map { appInfo ->
-            val drawable = appInfo.loadIcon(pm)
+                packages.map { appInfo ->
+                    val drawable = appInfo.loadIcon(pm)
 
-            val bitmap = drawable.toBitmap(
-                width = iconSize,
-                height = iconSize
-            )
+                val bitmap = drawable.toBitmap(
+                    width = iconSize,
+                    height = iconSize
+                )
 
-            AppUiState(
-                name = appInfo.loadLabel(pm).toString(),
-                icon = BitmapPainter(bitmap.asImageBitmap()),
-                status = Status.PENDING,
-                packageName = appInfo.packageName
-            )
+                    AppUiState(
+                        name = appInfo.loadLabel(pm).toString(),
+                        icon = BitmapPainter(bitmap.asImageBitmap()),
+                        status = Status.PENDING,
+                        packageName = appInfo.packageName
+                    )
+                }
+            }
+
+            appList.clear()
+            appList.addAll(apps)
         }
-
-        appList.clear()
-        appList.addAll(apps)
     }
 
     private fun startOptimization() {
