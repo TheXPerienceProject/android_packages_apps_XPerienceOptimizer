@@ -22,6 +22,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.lifecycleScope
 import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -34,6 +35,10 @@ import mx.xperience.optimizer.ui.adapters.Status
 import mx.xperience.optimizer.workers.OptimizerWorker
 
 class OptimizerActivity : ComponentActivity() {
+
+    companion object {
+        private const val OPTIMIZER_WORK_NAME = "xperience_optimizer"
+    }
 
     private val appList = mutableStateListOf<AppUiState>()
     private var optimizationProgress by mutableStateOf(0)
@@ -54,7 +59,7 @@ class OptimizerActivity : ComponentActivity() {
                 )
             }
         }
-        loadInstalledApps()
+        loadInstalledAppsAsync()
         startOptimization()
     }
 
@@ -91,21 +96,43 @@ class OptimizerActivity : ComponentActivity() {
     }
 
     private fun startOptimization() {
-        // WorkManager tiene un límite de 10KB, por lo que el Worker consultará
-        // los paquetes directamente para evitar excepciones de serialización.
+        val workManager = WorkManager.getInstance(this)
+
         val workRequest = OneTimeWorkRequest.Builder(OptimizerWorker::class.java)
             .build()
 
-        WorkManager.getInstance(this).enqueue(workRequest)
+        workManager.enqueueUniqueWork(
+            OPTIMIZER_WORK_NAME,
+            ExistingWorkPolicy.KEEP,
+            workRequest
+        )
 
-        WorkManager.getInstance(this)
-            .getWorkInfoByIdLiveData(workRequest.id)
-            .observe(this) { workInfo ->
-                when (workInfo?.state) {
+        workManager
+            .getWorkInfosForUniqueWorkLiveData(OPTIMIZER_WORK_NAME)
+            .observe(this) { workInfos ->
+
+                val workInfo = workInfos
+                    .firstOrNull { !it.state.isFinished }
+                    ?: workInfos.lastOrNull()
+                    ?: return@observe
+
+                when (workInfo.state) {
                     WorkInfo.State.RUNNING -> {
-                        val currentProgress = workInfo.progress.getInt(OptimizerWorker.PROGRESS_KEY, 0)
-                        val currentPackage = workInfo.progress.getString(OptimizerWorker.CURRENT_PACKAGE_KEY)
-                        val name = workInfo.progress.getString(OptimizerWorker.CURRENT_APP_NAME_KEY)
+                        val currentProgress =
+                            workInfo.progress.getInt(
+                                OptimizerWorker.PROGRESS_KEY,
+                                0
+                            )
+
+                        val currentPackage =
+                            workInfo.progress.getString(
+                                OptimizerWorker.CURRENT_PACKAGE_KEY
+                            )
+
+                        val name =
+                            workInfo.progress.getString(
+                                OptimizerWorker.CURRENT_APP_NAME_KEY
+                            )
 
                         optimizationProgress = currentProgress
                         currentAppName = name
@@ -114,19 +141,33 @@ class OptimizerActivity : ComponentActivity() {
                             updateAppStatus(it, Status.RUNNING)
                         }
 
-                        showInProgressNotification(currentProgress, name ?: "")
+                        showInProgressNotification(
+                            currentProgress,
+                            name ?: ""
+                        )
                     }
 
                     WorkInfo.State.SUCCEEDED -> {
                         optimizationProgress = 100
                         currentAppName = getString(R.string.optimized)
+
                         showCompletionNotification()
-                        Toast.makeText(this, getString(R.string.optimization_completed), Toast.LENGTH_SHORT).show()
+
+                        Toast.makeText(
+                            this,
+                            getString(R.string.optimization_completed),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
 
                     WorkInfo.State.FAILED -> {
                         showErrorNotification()
-                        Toast.makeText(this, getString(R.string.optimization_failed), Toast.LENGTH_SHORT).show()
+
+                        Toast.makeText(
+                            this,
+                            getString(R.string.optimization_failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
 
                     else -> {}
